@@ -90,7 +90,7 @@ h1,h2,h3{margin:0;font-family:'Space Grotesk','Inter',sans-serif;letter-spacing:
 .dbadge{position:absolute;top:-6px;right:-4px;min-width:20px;height:20px;border-radius:10px;background:#1F1B16;color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0 5px}
 .dhero{border-radius:22px;padding:18px;color:#fff;background:linear-gradient(135deg,var(--c),color-mix(in srgb,var(--c) 70%,#000));display:flex;flex-direction:column;gap:6px}
 .tline{display:flex;flex-direction:column;position:relative}
-.trow{display:grid;grid-template-columns:48px 14px 1fr;gap:8px;align-items:stretch;position:relative}
+.trow{display:grid;grid-template-columns:48px 14px 1fr 34px;gap:8px;align-items:stretch;position:relative}
 .trow .th{font-family:'Space Grotesk';font-weight:700;font-size:15px;padding-top:14px;text-align:right}
 .trow .tdot{position:relative}
 .trow .tdot::before{content:"";position:absolute;left:6px;top:0;bottom:0;width:2px;background:#E3D6C6}
@@ -98,6 +98,10 @@ h1,h2,h3{margin:0;font-family:'Space Grotesk','Inter',sans-serif;letter-spacing:
 .trow:first-child .tdot::before{top:24px}.trow:last-child .tdot::before{bottom:calc(100% - 24px)}
 .tcard{display:flex;flex-direction:column;gap:4px;align-items:flex-start;text-align:left;margin:5px 0;padding:12px 14px;border-radius:16px;background:#fff;border:1px solid var(--line);font-family:inherit;cursor:pointer;width:100%}
 .tcard .tt{font-size:15px;font-weight:600;color:#1F1B16}
+.grip{touch-action:none;display:flex;align-items:center;justify-content:center;color:#A39484;font-size:20px;letter-spacing:-3px;cursor:grab;user-select:none;-webkit-user-select:none;writing-mode:vertical-rl}
+.trow.dragging{opacity:.92;filter:drop-shadow(0 8px 14px rgba(0,0,0,.2));position:relative}
+.trow.dropbefore .tcard{box-shadow:0 -4px 0 -1px var(--ams)}
+.trow.dropend .tcard{box-shadow:0 4px 0 -1px var(--ams)}
 .tdoc{display:inline-flex;gap:6px;align-items:center;padding:6px 12px;border-radius:999px;background:var(--fly-soft);color:var(--fly-ink);font-size:13px;font-weight:700;margin-top:4px}
 .check{display:flex;gap:10px;align-items:flex-start;cursor:pointer;background:none;border:0;text-align:left;padding:0;width:100%}
 .box{margin-top:2px;width:22px;height:22px;border-radius:7px;border:2px solid #B8741A;flex:none;display:flex;align-items:center;justify-content:center;color:#fff}
@@ -386,11 +390,28 @@ function viewComer(){
     <div style="padding:0 20px"><div class="small muted" style="font-weight:600">Viaje noviembre 2026</div><h1 style="font-size:30px">Comer</h1></div>
     <div class="pills">${cities.map(c=>`<button class="pill ${S.city===c?'on':''}" style="--c:${CITYC[c]}" data-act="city" data-v="${c}">${c==='Ámsterdam'?'':`<span class="dot" style="background:${CITYC[c]}"></span>`}${c}</button>`).join('')}</div>
     <div style="padding:0 20px"><div class="seg">${meals.map(m=>`<button class="${S.meal===m?'on':''}" data-act="meal" data-v="${m}">${m}</button>`).join('')}</div></div>
+    ${S.pick?`<div style="padding:0 20px"><div class="dhero" style="--c:var(--ams);gap:8px"><div style="font-weight:700;font-size:17px">Elige restaurante para el ${fmtFecha(S.pick)}</div><div class="small" style="opacity:.9">Toca el + del que queráis y elegid la hora.</div><button class="btn ghost sm" data-act="pickcancel" style="background:#fff">Cancelar</button></div></div>`:''}
     <div style="padding:0 20px"><input id="c-q" class="in" type="search" placeholder="Buscar en la lista (nombre, tipo, dirección)…" value="${esc(S.cq||'')}" autocomplete="off" style="width:100%"></div>
     <div class="stack" style="padding:0 20px"><button class="btn ams" data-act="addlugar">${ic('plus')} Añadir sitio en ${S.city} (${S.meal.toLowerCase()})</button>${body}</div></div>`;
 }
 function applyCq(){ const q=(S.cq||'').trim().toLowerCase(); const nf=s=>s.normalize('NFD').replace(/[\u0300-\u036f]/g,''); const qq=nf(q); let n=0; document.querySelectorAll('.card').forEach(c=>{ const ok=!qq||nf(c.textContent.toLowerCase()).includes(qq); c.style.display=ok?'':'none'; if(ok)n++; }); const root=document.querySelector('#c-q'); if(root){ let m=document.querySelector('#c-none'); if(qq&&!n){ if(!m){ m=document.createElement('div'); m.id='c-none'; m.className='small muted'; m.style.padding='0 20px'; m.textContent='Ningún sitio coincide en esta lista.'; root.parentNode.after(m);} } else if(m) m.remove(); } }
 document.addEventListener('input',e=>{ if(e.target&&e.target.id==='c-q'){ S.cq=e.target.value; applyCq(); } });
+
+document.addEventListener('pointerdown',e=>{
+  const g=e.target.closest&&e.target.closest('.grip'); if(!g) return; const row=g.closest('.trow'); const list=row&&row.parentNode; if(!list) return;
+  e.preventDefault(); try{g.setPointerCapture(e.pointerId);}catch(_){}
+  row.classList.add('dragging'); const startY=e.clientY; const others=()=>[...list.children].filter(r=>r!==row); const startIdx=[...list.children].indexOf(row); let target=startIdx;
+  const move=ev=>{ const dy=ev.clientY-startY; row.style.transform='translateY('+dy+'px)'; row.style.zIndex=5;
+    const rr=row.getBoundingClientRect(); const mid=rr.top+rr.height/2; const os=others(); let n=0; os.forEach(o=>{ const b=o.getBoundingClientRect(); if(b.top+b.height/2<mid) n++; }); target=n;
+    os.forEach((o,i)=>{ o.classList.toggle('dropbefore',i===n); o.classList.toggle('dropend',n===os.length&&i===os.length-1); }); };
+  const up=async()=>{ g.removeEventListener('pointermove',move); g.removeEventListener('pointerup',up); g.removeEventListener('pointercancel',up);
+    const os=others(); os.forEach(o=>o.classList.remove('dropbefore','dropend')); row.classList.remove('dragging'); row.style.transform=''; row.style.zIndex='';
+    if(target===startIdx) return;
+    os.splice(target,0,row); const keys=os.map(r=>r.dataset.k);
+    const ok=await dbDo(()=>Promise.all(keys.map((k,i)=>{ const [kind,id]=k.split(':'); return F.setDoc(docRef(kind==='plan'?'planes':'lugares',id),{orden:i*10},{merge:true}); })));
+    if(!ok) render(); };
+  g.addEventListener('pointermove',move); g.addEventListener('pointerup',up); g.addEventListener('pointercancel',up);
+});
 function lugarCard(l){
   const key='u-'+l.id; const prob=!!S.marcas['probado:'+key], fav=!!S.marcas['fav:'+key];
   const maps = l.maps || mapsUrl([l.nombre,l.direccion,l.ciudad].filter(Boolean).join(' '));
@@ -418,14 +439,14 @@ function viewPlanes(){
     return `<button class="dtile ${x.d===sel.d?'on':''}" style="--c:${x.c}" data-act="pday" data-d="${x.d}" aria-pressed="${x.d===sel.d}"><span class="dw">${DIA[dd.getDay()]}</span><span class="dn">${dd.getDate()}</span><span class="dc">${x.city==='Vuelos'?'Vuelo':esc(x.city)}</span>${n?`<span class="dbadge">${n}</span>`:''}</button>`; }).join('');
   const dd=new Date(sel.d+'T12:00:00'); const it=itemsOf(sel);
   const rows=[];
-  it.plans.forEach(p=>rows.push({h:p.hora||'',kind:'plan',p}));
-  it.lug.forEach(l=>rows.push({h:'',kind:'lug',l}));
-  rows.sort((a,b)=>(a.h||'99').localeCompare(b.h||'99'));
+  it.plans.forEach(p=>rows.push({h:p.hora||'',kind:'plan',p,o:p.orden}));
+  it.lug.forEach(l=>rows.push({h:'',kind:'lug',l,o:l.orden}));
+  rows.sort((a,b)=>{ const ao=a.o!=null, bo=b.o!=null; if(ao&&bo) return a.o-b.o; if(ao!==bo) return ao?-1:1; return (a.h||'99').localeCompare(b.h||'99'); });
   const info=(sel.lines||[]).filter(l=>!/^Sin planes/i.test(l));
   const row=r=>{
     if(r.kind==='plan'){ const p=r.p; const dc=p.archivoId&&S.archivos.find(a=>a.id===p.archivoId);
-      return `<div class="trow"><div class="th">${p.hora?esc(p.hora):'<span class="muted">—</span>'}</div><div class="tdot"></div><button class="tcard" data-act="editplan" data-id="${p.id}"><span class="tt">${esc(p.texto)}</span>${dc?`<span data-act="opendoc" data-id="${dc.id}" class="tdoc">${ic('file',16)} Ver entrada</span>`:''}</button></div>`; }
-    const l=r.l; return `<div class="trow"><div class="th"><span class="muted">${ic('eat',18)}</span></div><div class="tdot"></div><button class="tcard" data-act="editlugar" data-id="${l.id}"><span class="tt">${esc(l.nombre)}</span><span class="small muted">${esc(l.comida)} · ${esc(l.ciudad)}</span></button></div>`; };
+      return `<div class="trow" data-k="plan:${p.id}"><div class="th">${p.hora?esc(p.hora):'<span class="muted">—</span>'}</div><div class="tdot"></div><button class="tcard" data-act="editplan" data-id="${p.id}"><span class="tt">${esc(p.texto)}</span><span class="wrap">${dc?`<span data-act="opendoc" data-id="${dc.id}" class="tdoc">${ic('file',16)} Ver entrada</span>`:''}${p.enlace?`<span data-act="openlink" data-u="${esc(p.enlace)}" class="tdoc" style="background:var(--ams-soft);color:var(--ams-ink)">${ic('out',16)} Abrir enlace</span>`:''}</span></button><span class="grip" aria-label="Mover" title="Arrastra para ordenar">⋮⋮</span></div>`; }
+    const l=r.l; return `<div class="trow" data-k="lug:${l.id}"><div class="th"><span class="muted">${ic('eat',18)}</span></div><div class="tdot"></div><button class="tcard" data-act="editlugar" data-id="${l.id}"><span class="tt">${esc(l.nombre)}</span><span class="small muted">${esc(l.comida)} · ${esc(l.ciudad)}</span></button><span class="grip" aria-label="Mover" title="Arrastra para ordenar">⋮⋮</span></div>`; };
   return `<div class="stack-l" style="padding-top:20px"><div class="stack" style="gap:4px;padding:0 20px"><h1 style="font-size:30px">Planes</h1><div class="muted">Elige un día para ver todo lo que hacéis. Lo que añade uno lo ve el otro.</div></div>
   <div class="dstrip">${strip}</div>
   <div style="padding:0 20px" class="stack">
@@ -568,25 +589,30 @@ function sheetGasto(g){
 function parseImporte(s){ const n=Number(String(s).trim().replace(/\s/g,'').replace(/\.(?=\d{3}\b)/g,'').replace(',','.')); return (isFinite(n)&&n>0)?Math.round(n*100):0; }
 
 function sheetPlan(dia0,p,pre){ pre=pre||{};
-  const dia=dia0; const arguments0={d:dia0};
-  const nuevo=!p; p=p||{hora:'',texto:pre.texto||''};
-  openSheet(`${sheetHead(nuevo?'Añadir plan':'Editar plan')}${dia?`<div class="small muted">${fmtFecha(dia)}</div>`:`<label class="f">Día<select class="in" id="p-dia">${DAYS.map(x=>{const dd=new Date(x.d+'T12:00:00'); const def=(pre.city&&(DAYS.find(z=>z.city===pre.city)||{}).d)||((todayStr()>=TRIP_START&&todayStr()<=TRIP_END)?todayStr():TRIP_START); return `<option value="${x.d}" ${x.d===def?'selected':''}>${DIAL[dd.getDay()]} ${dd.getDate()} ${MES[dd.getMonth()]} · ${x.city}</option>`}).join('')}</select></label>`}
+  const nuevo=!p; p=p||{hora:'',texto:pre.texto||'',enlace:''};
+  const def=p.dia||dia0||(pre.city&&(DAYS.find(z=>z.city===pre.city)||{}).d)||((todayStr()>=TRIP_START&&todayStr()<=TRIP_END)?todayStr():TRIP_START);
+  openSheet(`${sheetHead(nuevo?'Añadir plan':'Editar plan')}
+   <label class="f">Día<select class="in" id="p-dia">${DAYS.map(x=>{const dd=new Date(x.d+'T12:00:00'); return `<option value="${x.d}" ${x.d===def?'selected':''}>${DIAL[dd.getDay()]} ${dd.getDate()} ${MES[dd.getMonth()]} · ${x.city}</option>`}).join('')}</select></label>
    <label class="f">Hora (opcional)<input class="in" id="p-h" type="time" value="${esc(p.hora)}"></label>
    <label class="f">Plan<textarea class="in" id="p-t" placeholder="Qué vais a hacer, dónde, si hay que reservar…">${esc(p.texto)}</textarea></label>
+   <label class="f">Enlace (opcional)<input class="in" id="p-l" type="url" inputmode="url" placeholder="https://…" value="${esc(p.enlace||'')}"></label>
    <label class="f">Documento ligado (opcional)<select class="in" id="p-a"><option value="">Ninguno</option>${S.archivos.map(a=>`<option value="${a.id}" ${a.id===p.archivoId?'selected':''}>${esc(a.titulo)}</option>`).join('')}</select></label>
    <button class="btn ams" id="p-ok">Guardar</button>${nuevo?'':`<button class="btn danger" id="p-del">${ic('trash',18)} Borrar plan</button>`}`);
   $('#p-ok').onclick=async()=>{ const t=$('#p-t').value.trim(); if(!t){ toast('Escribe el plan.'); return; }
-    const dia=(arguments0.d||($('#p-dia')&&$('#p-dia').value)||'');
-    const ok=await dbDo(()=> nuevo ? F.addDoc(colRef('planes'),{dia,hora:$('#p-h').value,texto:t,archivoId:$('#p-a').value,creado:Date.now()}) : F.setDoc(docRef('planes',p.id),{dia:p.dia||dia,hora:$('#p-h').value,texto:t,archivoId:$('#p-a').value,creado:p.creado||Date.now()}));
-    if(ok) closeSheet(); };
+    const dia=$('#p-dia').value; let enlace=$('#p-l').value.trim(); if(enlace&&!/^https?:\/\//i.test(enlace)) enlace='https://'+enlace;
+    const data={dia,hora:$('#p-h').value,texto:t,enlace,archivoId:$('#p-a').value};
+    const ok=await dbDo(()=> nuevo ? F.addDoc(colRef('planes'),{...data,creado:Date.now()}) : F.setDoc(docRef('planes',p.id),{...data,orden:(p.dia===dia&&p.orden!=null)?p.orden:null,creado:p.creado||Date.now()}));
+    if(ok){ closeSheet(); S.pd=dia; if(S.pick){ S.pick=null; S.tab='planes'; S.sub=null; render(); window.scrollTo(0,0);} else render(); } };
   if(!nuevo) $('#p-del').onclick=async()=>{ const ok=await dbDo(()=>F.deleteDoc(docRef('planes',p.id))); if(ok) closeSheet(); };
 }
 function sheetChoose(d){
+  const city=(DAYS.find(x=>x.d===d)||{}).city||'Ámsterdam';
   openSheet(`${sheetHead('Añadir al '+fmtFecha(d))}
    <button class="btn ams" id="c-plan">${ic('plans',20)} Un plan</button>
-   <button class="btn ghost" id="c-rest">${ic('eat',20)} Un restaurante</button>`);
+   <button class="btn ghost" id="c-rest">${ic('eat',20)} Elegir restaurante de la lista</button>
+   <a class="btn ghost" id="c-maps" target="_blank" rel="noopener" href="https://www.google.com/maps/search/${encodeURIComponent('restaurantes '+(city==='Vuelos'?'':city))}">${ic('out',18)} Buscar uno nuevo en Google Maps</a>`);
   $('#c-plan').onclick=()=>sheetPlan(d);
-  $('#c-rest').onclick=()=>sheetLugar(null,{dia:d, ciudad:(DAYS.find(x=>x.d===d)||{}).city, comida:'Cena'});
+  $('#c-rest').onclick=()=>{ closeSheet(); S.pick=d; if(CITYC[city]) S.city=city; S.tab='comer'; S.sub=null; render(); window.scrollTo(0,0); };
 }
 function sheetLugar(l,pre){
   pre=pre||{}; const nuevo=!l;
@@ -691,7 +717,7 @@ async function sheetOpenDoc(id){
 document.addEventListener('click', async e=>{
   const el=e.target.closest('[data-act]'); if(!el) return; const a=el.dataset.act;
   if(a==='closesheet'){ if(e.target===el||el.classList.contains('iconbtn')||el.closest('.iconbtn')) closeSheet(); return; }
-  if(a==='tab'){ S.tab=el.dataset.tab; S.sub=null; render(); window.scrollTo(0,0); }
+  if(a==='tab'){ if(el.dataset.tab!=='comer') S.pick=null; S.tab=el.dataset.tab; S.sub=null; render(); window.scrollTo(0,0); }
   else if(a==='go'){ S.tab=el.dataset.tab; S.sub=null; render(); window.scrollTo(0,0); }
   else if(a==='sub'){ S.sub=el.dataset.sub; render(); window.scrollTo(0,0); }
   else if(a==='back'){ S.sub=null; S.tab='mas'; render(); window.scrollTo(0,0); }
@@ -704,7 +730,9 @@ document.addEventListener('click', async e=>{
   else if(a==='editgasto'){ const g=S.gastos.find(x=>x.id===el.dataset.id); if(g) sheetGasto(g); }
   else if(a==='pday'){ S.pd=el.dataset.d; render(); }
   else if(a==='addchoose') sheetChoose(el.dataset.d);
-  else if(a==='plusrest') sheetPlan(null,null,{texto:'Comer en '+el.dataset.n,city:el.dataset.c});
+  else if(a==='plusrest') sheetPlan(S.pick||null,null,{texto:'Comer en '+el.dataset.n,city:el.dataset.c});
+  else if(a==='pickcancel'){ const d=S.pick; S.pick=null; S.pd=d; S.tab='planes'; render(); window.scrollTo(0,0); }
+  else if(a==='openlink'){ window.open(el.dataset.u,'_blank','noopener'); }
   else if(a==='addlugar') sheetLugar(null,{});
   else if(a==='editlugar'){ const l=S.lugares.find(x=>x.id===el.dataset.id); if(l) sheetLugar(l); }
   else if(a==='editplan'){ const p=S.planes.find(x=>x.id===el.dataset.id); if(p) sheetPlan(p.dia,p); }
