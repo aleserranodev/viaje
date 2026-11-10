@@ -463,11 +463,12 @@ function viewMas(){
   return `<div class="pad stack-l"><h1 style="font-size:30px">Más</h1><div class="stack">
     ${row('hoteles','bed','Hoteles','Dirección, fechas y notas de cada alojamiento','var(--ams-ink)','var(--ams-soft)')}
     ${row('docs','doc','Documentos','Billetes, entradas y reservas','var(--fly-ink)','var(--fly-soft)')}
-    ${row('gastos','wallet','Gastos','Total y reparto a partes iguales','var(--bru-ink)','var(--bru-soft)')}</div>
+    ${row('ruta','route','Ruta','Día a día, del viernes 13 al sábado 21','var(--ams-ink)','var(--ams-soft)')}
     <div class="stack"><div class="small muted">Eres <b>${esc(S.yo)}</b> en este móvil.</div>
     <div class="row" style="gap:8px"><button class="btn ghost sm" data-act="chyo" style="flex:1">Cambiar quién soy</button><button class="btn ghost sm" data-act="chcode" style="flex:1">${ic('key',18)} Cambiar código</button></div></div></div>`;
 }
 
+function backRow(){ return backBar('').split('</div><div style="padding:8px 20px 0">')[0]+'</div>'; }
 function backBar(title){ return `<div class="row" style="padding:12px 12px 0"><button class="iconbtn" data-act="back" aria-label="Volver">${ic('back')}</button><span class="small muted" style="font-weight:600">Más</span></div><div style="padding:8px 20px 0"><h1 style="font-size:30px">${title}</h1></div>`; }
 function viewHoteles(){
   return backBar('Hoteles') + `<div class="pad stack">${HOTELES.map(h=>{
@@ -520,7 +521,7 @@ function viewGastos(){
       ${q.sinN?`<div style="background:var(--warn-bg);border:1px solid var(--warn-line);border-radius:16px;padding:12px;color:var(--warn-ink)" class="small"><b>${q.sinN} ${q.sinN===1?'gasto sin pagador':'gastos sin pagador'}</b> (${eur(q.sin)}) no cuentan en el saldo. Ábrelos y elige quién pagó.</div>`:''}
       ${lst('Cristina')}${lst('Alejandro')}</div>`;
   }
-  return backBar('Gastos') + `<div class="pad stack-l">
+  return (S.sub==='gastos'?backBar('Gastos'):`<div style="padding:20px 20px 0"><h1 style="font-size:30px">Gastos</h1></div>`) + `<div class="pad stack-l">
    <div style="background:var(--bru-soft);border:1px solid #BFE0CC;border-radius:20px;padding:18px;display:flex;flex-direction:column;gap:6px;color:var(--bru-ink)">
      <div class="row" style="justify-content:space-between"><span class="small" style="font-weight:600">Total del viaje</span><span class="status ${S.online?'ok':'off'}"><i></i>${S.online?'Sincronizado':'Sin conexión'}</span></div>
      <div style="font-family:'Space Grotesk';font-size:34px;line-height:40px;font-weight:700">${eur(tot)}</div>
@@ -536,12 +537,12 @@ function currentName(){ return S.sub || S.tab; }
 function render(only){
   if(!S.code){ renderGate(); return; }
   if(only && !only.includes(currentName())) { renderTabs(); return; }
-  const v={inicio:viewInicio,ruta:viewRuta,comer:viewComer,planes:viewPlanes,mas:viewMas,hoteles:viewHoteles,docs:viewDocs,gastos:viewGastos}[currentName()];
+  const v={inicio:viewInicio,ruta:()=>(S.sub==='ruta'?backRow():'')+viewRuta(),comer:viewComer,planes:viewPlanes,mas:viewMas,hoteles:viewHoteles,docs:viewDocs,gastos:viewGastos}[currentName()];
   const y=window.scrollY; $('#view').innerHTML=v(); if(currentName()==='comer') applyCq(); if(currentName()==='planes'){ const o=document.querySelector('.dtile.on'); if(o&&o.parentNode) o.parentNode.scrollLeft=o.offsetLeft-o.parentNode.clientWidth/2+o.offsetWidth/2; } renderTabs(); if(only) window.scrollTo(0,y);
 }
 function renderTabs(){
   if(!S.code){ $('#tabs').innerHTML=''; return; }
-  const items=[['inicio','home','Inicio'],['ruta','route','Ruta'],['comer','eat','Comer'],['planes','plans','Planes'],['mas','more','Más']];
+  const items=[['inicio','home','Inicio'],['gastos','wallet','Gastos'],['planes','plans','Planes'],['comer','eat','Comer'],['mas','more','Más']];
   const cur=S.sub?'mas':S.tab;
   $('#tabs').innerHTML=`<nav class="tabbar" aria-label="Secciones">${items.map(([k,i,l])=>`<button class="${cur===k?'on':''}" data-act="tab" data-tab="${k}" ${cur===k?'aria-current="page"':''}><span class="ic">${ic(i)}</span>${l}</button>`).join('')}</nav>`;
 }
@@ -718,8 +719,8 @@ document.addEventListener('click', async e=>{
   const el=e.target.closest('[data-act]'); if(!el) return; const a=el.dataset.act;
   if(a==='closesheet'){ if(e.target===el||el.classList.contains('iconbtn')||el.closest('.iconbtn')) closeSheet(); return; }
   if(a==='tab'){ if(el.dataset.tab!=='comer') S.pick=null; S.tab=el.dataset.tab; S.sub=null; render(); window.scrollTo(0,0); }
-  else if(a==='go'){ S.tab=el.dataset.tab; S.sub=null; render(); window.scrollTo(0,0); }
-  else if(a==='sub'){ S.sub=el.dataset.sub; render(); window.scrollTo(0,0); }
+  else if(a==='go'){ if(el.dataset.tab==='ruta'){ S.tab='mas'; S.sub='ruta'; } else { S.tab=el.dataset.tab; S.sub=null; } render(); window.scrollTo(0,0); }
+  else if(a==='sub'){ if(el.dataset.sub==='gastos'){ S.tab='gastos'; S.sub=null; } else { S.sub=el.dataset.sub; } render(); window.scrollTo(0,0); }
   else if(a==='back'){ S.sub=null; S.tab='mas'; render(); window.scrollTo(0,0); }
   else if(a==='city'){ S.city=el.dataset.v; render(); }
   else if(a==='meal'){ S.meal=el.dataset.v; render(); }
