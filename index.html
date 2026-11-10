@@ -333,7 +333,7 @@ function viewRuta(){
 function viewComer(){
   const cities=['Ámsterdam','Brujas','Gante','Bruselas'], meals=['Desayuno','Comida','Cena'];
   const hasData = S.city==='Ámsterdam' && S.meal==='Desayuno';
-  const mine = S.lugares.filter(l=>l.ciudad===S.city && l.comida===S.meal).sort((a,b)=>(a.creado||0)-(b.creado||0));
+  const mine = S.lugares.filter(l=>l.ciudad===S.city && l.comida===S.meal).sort((a,b)=>{ const ma=parseFloat(a.minutos), mb=parseFloat(b.minutos); const va=isNaN(ma)?9999:ma, vb=isNaN(mb)?9999:mb; return va-vb || (a.creado||0)-(b.creado||0); });
   const mineHtml = mine.map(lugarCard).join('');
   let body='';
   if(hasData){
@@ -376,7 +376,7 @@ function lugarCard(l){
       ${l.etiqueta?`<div><span class="chip" style="background:var(--ams);color:var(--ink);font-weight:700">${esc(l.etiqueta)}</span></div>`:''}
       <div><h2 style="font-size:22px;line-height:28px">${esc(l.nombre)}</h2>
         ${l.direccion?`<div class="row small muted" style="gap:6px;align-items:flex-start;margin-top:2px"><span style="margin-top:1px">${ic('pin',16)}</span><span>${esc(l.direccion)}</span></div>`:''}</div>
-      <div class="wrap">${l.minutos?`<span class="chip walk">${ic('walk',14,2)}${esc(l.minutos)} min andando del hotel</span>`:''}${l.precio?`<span class="chip price">${esc(l.precio)}</span>`:''}${l.horario?`<span class="chip">${esc(l.horario)}</span>`:''}${l.reserva?`<span class="chip">${esc(l.reserva)}</span>`:''}${l.dia?`<span class="chip warn">${fmtFecha(l.dia)}</span>`:''}</div>
+      <div class="wrap">${l.minutos?`<span class="chip walk">${ic('walk',14,2)}≈ ${esc(l.minutos)} min andando del hotel</span>`:''}${l.precio?`<span class="chip price">${esc(l.precio)}</span>`:''}${l.horario?`<span class="chip">${esc(l.horario)}</span>`:''}${l.reserva?`<span class="chip">${esc(l.reserva)}</span>`:''}${l.dia?`<span class="chip warn">${fmtFecha(l.dia)}</span>`:''}</div>
       ${l.desc?`<p style="margin:0;font-size:14px;line-height:21px;color:#3D352C">${esc(l.desc)}</p>`:''}
       <div class="row" style="gap:8px">
         <a class="btn ams" href="${esc(maps)}" target="_blank" rel="noopener" style="flex:1">Abrir en Google Maps ${ic('out',18,2)}</a>
