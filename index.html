@@ -392,11 +392,9 @@ function viewComer(){
   } else {
     body = `<div class="empty"><div style="font-weight:700;color:var(--ink);margin-bottom:4px">${S.meal} en ${S.city}</div>Aún no hay sitios aquí. Añade el primero con el botón de arriba.</div>`;
   }
-  const qs=[...(hasData?DATA.desayunos_amsterdam.map(p=>[p.nombre,p.direccion]):[]),...mine.map(l=>[l.nombre,l.direccion])].map(([n,d])=>[(n||'').replace(/\([^)]*\)/g,'').trim(),(d||'').replace(/\([^)]*\)/g,'').trim()]).map(([n,d])=>[n,d&&!new RegExp(S.city,'i').test(d)?d:'',S.city].filter(Boolean).join(', '));
-  let mapBtns='';
-  if(qs.length){ const E=encodeURIComponent, CH=11; const parts=[]; for(let i=0;i<qs.length;i+=CH) parts.push(qs.slice(i,i+CH));
-    const url=a=>a.length===1?'https://www.google.com/maps/search/?api=1&query='+E(a[0]):'https://www.google.com/maps/dir/?api=1&travelmode=walking&origin='+E(a[0])+'&destination='+E(a[a.length-1])+(a.length>2?'&waypoints='+E(a.slice(1,-1).join('|')):'');
-    mapBtns=`<div style="padding:0 20px" class="stack"><div class="row" style="gap:8px;flex-wrap:wrap">${parts.map((a,i)=>`<a class="btn ghost" href="${esc(url(a))}" target="_blank" rel="noopener" style="flex:1;min-width:200px">${ic('pin',18)} ${parts.length===1?'Ver todos en el mapa ('+qs.length+')':'Ver en el mapa · '+(i*CH+1)+'–'+(i*CH+a.length)}</a>`).join('')}</div>${parts.length>1?'<div class="small muted">Google Maps admite 11 sitios por mapa, por eso se divide en varios.</div>':''}</div>`; }
+  const cl=x=>(x||'').replace(/\([^)]*\)/g,'').trim();
+  S.mapItems=[...(hasData?DATA.desayunos_amsterdam.map(p=>[p.nombre,p.direccion]):[]),...mine.map(l=>[l.nombre,l.direccion])].map(([n,d])=>({n:cl(n),a:cl(d),c:S.city}));
+  const mapBtns=S.mapItems.length?`<div style="padding:0 20px"><button class="btn ghost" data-act="mapall" style="width:100%">${ic('pin',18)} Ver todos en el mapa (${S.mapItems.length})</button></div>`:'';
   return `<div class="stack" style="padding-top:20px;gap:14px">
     <div style="padding:0 20px"><div class="small muted" style="font-weight:600">Viaje noviembre 2026</div><h1 style="font-size:30px">Comer</h1></div>
     <div class="pills">${cities.map(c=>`<button class="pill ${S.city===c?'on':''}" style="--c:${CITYC[c]}" data-act="city" data-v="${c}">${c==='Ámsterdam'?'':`<span class="dot" style="background:${CITYC[c]}"></span>`}${c}</button>`).join('')}</div>
@@ -758,6 +756,37 @@ function pickFotos(gallery){
   i.onchange=()=>{ const fs=[...i.files].filter(f=>f.type.startsWith('image/')); if(fs.length) sheetAddFoto(fs); };
   i.click();
 }
+
+/* ====================== mapa con todos los sitios ====================== */
+const hashQ=q=>{ let h=5381; for(let i=0;i<q.length;i++) h=((h<<5)+h+q.charCodeAt(i))|0; return 'k'+(h>>>0).toString(36); };
+function loadLeaflet(){ if(window.L) return Promise.resolve();
+  return new Promise((res,rej)=>{ const l=document.createElement('link'); l.rel='stylesheet'; l.href='https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css'; document.head.appendChild(l);
+    const s=document.createElement('script'); s.src='https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js'; s.onload=res; s.onerror=rej; document.head.appendChild(s); }); }
+async function openMapAll(){
+  const items=(S.mapItems||[]).slice(); if(!items.length) return; const city=S.city, meal=S.meal; const col=CITYC[city]||'#444';
+  const ov=document.createElement('div'); ov.id='mapov'; ov.style.cssText='position:fixed;inset:0;z-index:60;background:#FBF7F1;display:flex;flex-direction:column';
+  ov.innerHTML=`<div class="row" style="padding:10px 12px;justify-content:space-between;gap:8px"><div><div style="font-weight:700;font-size:17px">${esc(meal)} en ${esc(city)}</div><div class="small muted" id="mp-st">Cargando mapa…</div></div><button class="iconbtn" data-act="mapclose" aria-label="Cerrar">${ic('x')}</button></div><div id="mp-c" style="flex:1;min-height:200px"></div>`;
+  document.body.appendChild(ov);
+  try{ await loadLeaflet(); }catch(e){ $('#mp-st').textContent='No se pudo cargar el mapa. ¿Hay conexión?'; return; }
+  const map=L.map('mp-c',{zoomControl:true}).setView(city==='Bruselas'?[50.846,4.352]:city==='Brujas'?[51.209,3.225]:city==='Gante'?[51.054,3.722]:[52.372,4.893],14);
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(map);
+  const pts=[]; let miss=0, done=0; const geo=Object.assign({},(S.config&&S.config.geo)||{}); try{ Object.assign(geo,JSON.parse(localStorage.getItem('viaje.geo')||'{}')); }catch(_){}
+  const upd=()=>{ const el=$('#mp-st'); if(el) el.textContent=`${pts.length} de ${items.length} sitios en el mapa${done<items.length?' · buscando…':''}${miss?` · ${miss} sin localizar`:''}`; };
+  const add=(it,ll,i)=>{ const g='https://www.google.com/maps/search/?api=1&query='+encodeURIComponent([it.n,it.a,it.c].filter(Boolean).join(', '));
+    const d='https://www.google.com/maps/dir/?api=1&travelmode=walking&destination='+encodeURIComponent([it.n,it.a,it.c].filter(Boolean).join(', '));
+    const m=L.marker(ll,{icon:L.divIcon({className:'',html:`<div style="background:${col};color:#fff;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4);width:28px;height:28px;border-radius:14px;display:flex;align-items:center;justify-content:center;font:700 13px Space Grotesk,sans-serif">${i+1}</div>`,iconSize:[28,28],iconAnchor:[14,14]})}).addTo(map);
+    m.bindPopup(`<b>${esc(it.n)}</b><br><span style="font-size:12px">${esc(it.a)}</span><br><a href="${esc(g)}" target="_blank" rel="noopener">Abrir en Google Maps</a> · <a href="${esc(d)}" target="_blank" rel="noopener">Cómo llegar</a>`);
+    pts.push(ll); map.fitBounds(L.latLngBounds(pts).pad(.15),{maxZoom:16}); };
+  const nom=async q=>{ const r=await fetch('https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&countrycodes=nl,be&q='+encodeURIComponent(q)).then(x=>x.json()); return r[0]?[+r[0].lat,+r[0].lon]:null; };
+  let saved=false;
+  for(let i=0;i<items.length;i++){
+    if(!$('#mapov')) return; const it=items[i]; const key=hashQ([it.n,it.a,it.c].join('|')); let ll=geo[key];
+    if(!ll){ try{ ll=it.a?await nom(it.a+', '+it.c):null; await new Promise(r=>setTimeout(r,1100)); if(!ll){ ll=await nom(it.n+', '+it.c); await new Promise(r=>setTimeout(r,1100)); } }catch(e){ ll=null; }
+      if(ll){ geo[key]=ll; saved=true; try{ localStorage.setItem('viaje.geo',JSON.stringify(geo)); }catch(_){} if(S.dbReady) F.setDoc(docRef('config','geo'),{[key]:ll},{merge:true}).catch(()=>{}); } }
+    done++; if(ll) add(it,ll,i); else miss++; upd();
+  }
+  upd();
+}
 function sheetDoc(){
   openSheet(`${sheetHead('Añadir documento')}
    <label class="f">Título<input class="in" id="d-t" placeholder="Vuelo ida Sevilla → Ámsterdam"></label>
@@ -834,6 +863,8 @@ document.addEventListener('click', async e=>{
   else if(a==='editplan'){ const p=S.planes.find(x=>x.id===el.dataset.id); if(p) sheetPlan(p.dia,p); }
   else if(a==='edithotel') sheetHotel();
   else if(a==='adddoc') sheetDoc();
+  else if(a==='mapall') openMapAll();
+  else if(a==='mapclose'){ const o=$('#mapov'); if(o) o.remove(); }
   else if(a==='addfoto') pickFotos(!!el.dataset.g);
   else if(a==='openfoto') sheetOpenFoto(el.dataset.id);
   else if(a==='fcity'){ S.fcity=el.dataset.v; render(['fotos']); }
