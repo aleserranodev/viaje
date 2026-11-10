@@ -1,0 +1,552 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#FBF7F2">
+<meta name="color-scheme" content="light">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Viaje">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="apple-touch-icon" href="./icons/icon-192.png">
+<link rel="icon" href="./icons/icon-192.png">
+<title>Viaje Ámsterdam, Brujas, Gante y Bruselas</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#FBF7F2; --ink:#1F1B16; --muted:#5E554B; --line:#EADFD2; --card:#FFFFFF; --soft:#F0E8DE;
+  --ams:#F26A21; --ams-soft:#FFE9D8; --ams-ink:#6B2E00;
+  --bru:#2E9E5B; --bru-soft:#E3F3E9; --bru-ink:#12462A;
+  --bxl:#7B4FD0; --bxl-soft:#EEE7FB; --bxl-ink:#2F1A63;
+  --fly:#2F6FDE; --fly-soft:#E4EEFF; --fly-ink:#0F2B5B;
+  --warn-bg:#FFF3D6; --warn-line:#F0D9A0; --warn-ink:#7A4B00;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;font-size:16px;line-height:1.4}
+body{min-height:100vh;min-height:100dvh}
+button,input,select,textarea{font-family:inherit;font-size:16px;color:var(--ink)}
+a{text-decoration:none;color:inherit}
+h1,h2,h3{margin:0;font-family:'Space Grotesk','Inter',sans-serif;letter-spacing:-.3px}
+#app{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;display:flex;flex-direction:column;position:relative}
+#view{flex:1;padding-bottom:calc(92px + env(safe-area-inset-bottom))}
+.pad{padding:20px}
+.stack{display:flex;flex-direction:column;gap:12px}
+.stack-l{display:flex;flex-direction:column;gap:24px}
+.row{display:flex;align-items:center;gap:10px}
+.wrap{display:flex;flex-wrap:wrap;gap:6px}
+.muted{color:var(--muted)}
+.small{font-size:13px;line-height:18px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:20px;overflow:hidden}
+.card-p{padding:16px}
+.chip{display:inline-flex;align-items:center;gap:6px;background:var(--soft);color:#3D352C;font-size:13px;line-height:18px;font-weight:500;padding:5px 10px;border-radius:14px}
+.chip.price{background:var(--ams-soft);color:var(--ams-ink);font-weight:600}
+.chip.walk{background:#fff;border:1.5px solid var(--ink);color:var(--ink);font-weight:600;padding:3.5px 8.5px}
+.chip.warn{background:var(--warn-bg);color:var(--warn-ink);font-weight:600}
+.btn{display:flex;align-items:center;justify-content:center;gap:8px;min-height:48px;border-radius:14px;border:0;background:var(--ink);color:#fff;font-weight:700;font-size:15px;padding:0 16px;cursor:pointer;width:100%}
+.btn.ams{background:var(--ams);color:var(--ink)}
+.btn.fly{background:var(--fly);color:#fff}
+.btn.ghost{background:#fff;color:var(--ink);border:1px solid #E3D6C6;font-weight:600}
+.btn.danger{background:#fff;color:#A32020;border:1px solid #E7B9B9;font-weight:600}
+.btn.sm{min-height:44px;width:auto;font-size:14px}
+.btn[disabled]{opacity:.5}
+.h2{font-size:20px;line-height:26px;font-weight:700}
+.dot{width:10px;height:10px;border-radius:5px;display:inline-block;flex:none}
+.seg{display:flex;gap:4px;padding:4px;border-radius:16px;background:var(--soft)}
+.seg button{flex:1;height:44px;border:0;border-radius:12px;background:transparent;color:#3D352C;font-weight:500;font-size:15px;cursor:pointer}
+.seg button.on{background:var(--ink);color:#fff;font-weight:600}
+.pills{display:flex;gap:8px;overflow-x:auto;padding:2px 20px 6px;scrollbar-width:none}
+.pills::-webkit-scrollbar{display:none}
+.pill{flex:none;height:44px;padding:0 16px;border-radius:22px;border:1px solid #E3D6C6;background:#fff;font-weight:500;font-size:15px;display:flex;align-items:center;gap:8px;cursor:pointer}
+.pill.on{background:var(--c,var(--ams));border-color:var(--c,var(--ams));font-weight:600;color:#1F1B16}
+.photo{position:relative;height:190px;background:#E9DCCB}
+.photo img{width:100%;height:100%;object-fit:cover;display:block}
+.badge{position:absolute;left:12px;top:12px;background:#fff;color:var(--ink);font-size:12px;line-height:16px;font-weight:600;padding:4px 10px;border-radius:12px}
+.badge.hot{background:var(--ams);font-weight:700}
+.tabbar{position:fixed;left:0;right:0;bottom:0;z-index:20;background:#fff;border-top:1px solid var(--line);padding:8px 8px calc(6px + env(safe-area-inset-bottom));display:flex;max-width:520px;margin:0 auto}
+.tabbar button{flex:1;border:0;background:transparent;display:flex;flex-direction:column;align-items:center;gap:4px;color:#3D352C;font-size:12px;line-height:16px;font-weight:500;padding:0;cursor:pointer}
+.tabbar button .ic{width:56px;height:32px;border-radius:16px;display:flex;align-items:center;justify-content:center}
+.tabbar button.on{color:var(--ink);font-weight:700}
+.tabbar button.on .ic{background:var(--ams)}
+.hero{height:300px;position:relative}
+.hero img{width:100%;height:100%;object-fit:cover;object-position:center 40%;display:block}
+.hero .shade{position:absolute;inset:0;background:linear-gradient(to bottom,rgba(31,27,22,.15),rgba(31,27,22,0) 35%,rgba(31,27,22,.82))}
+.hero .tag{position:absolute;right:16px;top:calc(16px + env(safe-area-inset-top));background:var(--ams);color:var(--ink);font-size:13px;font-weight:700;padding:6px 12px;border-radius:16px}
+.hero .txt{position:absolute;left:20px;right:20px;bottom:18px;color:#fff;display:flex;flex-direction:column;gap:8px}
+.cityrow{display:flex;background:#fff;border:1px solid var(--line);border-radius:18px;overflow:hidden}
+.cityrow .im{width:104px;flex:none}
+.cityrow img{width:100%;height:100%;object-fit:cover;display:block}
+.tile{flex:1;border-radius:18px;padding:14px 12px;display:flex;flex-direction:column;gap:10px;border:0;text-align:left;cursor:pointer}
+.tile .o{width:40px;height:40px;border-radius:20px;background:#fff;color:var(--ink);display:flex;align-items:center;justify-content:center}
+.check{display:flex;gap:10px;align-items:flex-start;cursor:pointer;background:none;border:0;text-align:left;padding:0;width:100%}
+.box{margin-top:2px;width:22px;height:22px;border-radius:7px;border:2px solid #B8741A;flex:none;display:flex;align-items:center;justify-content:center;color:#fff}
+.box.on{background:#B8741A}
+.daycard{border-left:6px solid var(--c);background:#fff;border-radius:0 18px 18px 0;border-top:1px solid var(--line);border-right:1px solid var(--line);border-bottom:1px solid var(--line);padding:14px 16px;display:flex;flex-direction:column;gap:8px}
+.daycard.today{box-shadow:0 0 0 3px rgba(242,106,33,.35)}
+.sheetbg{position:fixed;inset:0;background:rgba(31,27,22,.5);z-index:40;display:flex;align-items:flex-end;justify-content:center}
+.sheet{background:var(--bg);width:100%;max-width:520px;max-height:92dvh;overflow-y:auto;border-radius:24px 24px 0 0;padding:20px 20px calc(20px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:14px}
+label.f{display:flex;flex-direction:column;gap:6px;font-weight:600;font-size:14px}
+.in{height:48px;border-radius:12px;border:1.5px solid #D8C9B6;background:#fff;padding:0 12px;width:100%}
+textarea.in{height:auto;min-height:80px;padding:10px 12px}
+.toast{position:fixed;left:50%;bottom:calc(100px + env(safe-area-inset-bottom));transform:translateX(-50%);background:var(--ink);color:#fff;padding:12px 16px;border-radius:14px;font-size:14px;z-index:60;max-width:90%;text-align:center}
+.status{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;padding:4px 10px;border-radius:12px;background:var(--soft)}
+.status i{width:8px;height:8px;border-radius:4px;background:#999;display:block}
+.status.ok i{background:#2E9E5B}
+.status.off i{background:#C97A00}
+.listrow{display:flex;align-items:center;gap:12px;padding:14px 16px;background:#fff;border:1px solid var(--line);border-radius:18px;width:100%;text-align:left;cursor:pointer;min-height:64px}
+.gate{min-height:100dvh;display:flex;flex-direction:column;justify-content:center;gap:16px;padding:24px}
+.empty{background:var(--soft);border-radius:18px;padding:22px 18px;text-align:center;color:var(--muted)}
+.iconbtn{width:44px;height:44px;border-radius:22px;border:1px solid #E3D6C6;background:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;flex:none;color:var(--ink)}
+.iconbtn.on{background:var(--ams);border-color:var(--ams)}
+.iconbtn.ok{background:var(--bru);border-color:var(--bru);color:#fff}
+</style>
+</head>
+<body>
+<div id="app"><div id="view"></div></div>
+<div id="tabs"></div>
+<div id="sheet"></div>
+<div id="toast"></div>
+
+<script>
+/*DATA*/
+const DATA = {"nota": "Datos del viaje recogidos hasta el 10 nov 2026. Todo lo marcado en 'por_confirmar' o 'estimado' hay que verificarlo antes de publicarlo en la app.", "viaje": {"titulo": "Viaje noviembre 2026 – Ámsterdam, Brujas, Gante y Bruselas", "desde": "2026-11-13", "hasta": "2026-11-21", "noches": 8, "personas": 2, "origen": "Sevilla"}, "colores": {"vuelos": "#2F6FDE", "amsterdam": "#F26A21", "brujas_gante": "#2E9E5B", "bruselas": "#7B4FD0", "fondo": "#FBF7F2", "texto": "#1F1B16"}, "itinerario": [{"fecha": "2026-11-13", "ciudad": "Vuelos", "titulo": "Vuelo Sevilla → Ámsterdam", "detalle": "Llegada hacia las 22:30", "por_confirmar": ["Aeropuerto de llegada (Schiphol o Eindhoven)", "Último tren/bus hasta el hotel"]}, {"fecha": "2026-11-13/17", "ciudad": "Ámsterdam", "titulo": "4 noches en Ámsterdam", "detalle": "Entradas Casa de Ana Frank para el domingo 15"}, {"fecha": "2026-11-17", "ciudad": "Brujas", "titulo": "Tren Ámsterdam → Brujas", "detalle": "Unas 3 h con un cambio; llegada hacia mediodía"}, {"fecha": "2026-11-18", "ciudad": "Gante", "titulo": "Excursión de un día a Gante", "detalle": "Tren de 25-30 min; se dejan las maletas en Brujas y se vuelve a dormir allí"}, {"fecha": "2026-11-19", "ciudad": "Bruselas", "titulo": "Tren Brujas → Bruselas por la tarde", "detalle": "1 h–1 h 15 min"}, {"fecha": "2026-11-20", "ciudad": "Bruselas", "titulo": "Día completo en Bruselas"}, {"fecha": "2026-11-21", "ciudad": "Vuelos", "titulo": "Vuelo Bruselas → Sevilla", "por_confirmar": ["Aeropuerto de salida (Zaventem o Charleroi)"]}], "hoteles": [{"ciudad": "Ámsterdam", "nombre": "The Red Ox – Super Central Canal View Rooms", "direccion": "Singel 89", "noches": 4, "entrada": "2026-11-13", "salida": "2026-11-17", "por_confirmar": ["Horario de recepción: llegada hacia las 22:30"]}, {"ciudad": "Brujas", "nombre": "Hostel 28", "direccion": "Dweerstraat 28", "noches": 2, "entrada": "2026-11-17", "salida": "2026-11-19", "nota": "A 13-15 min andando de la estación; sin ascensor"}, {"ciudad": "Bruselas", "nombre": "(por añadir)", "noches": 2, "entrada": "2026-11-19", "salida": "2026-11-21"}], "gastos": {"reparto": "50/50", "total": 1748.09, "por_persona": 874.05, "lineas": [["2026-11-13", "Vuelo ida Sevilla → Ámsterdam", 309.94, 154.97], ["2026-11-13/17", "Hotel Ámsterdam (4 noches)", 834.91, 417.46], ["2026-11-15", "Casa de Ana Frank (entradas)", 33.0, 16.5], ["2026-11-17/19", "Hostel 28 Brujas (2 noches)", 182.28, 91.14], ["2026-11-19/21", "Hotel Bruselas (2 noches)", 220.0, 110.0], ["2026-11-21", "Vuelo vuelta Bruselas → Sevilla", 167.96, 83.98]]}, "desayunos_amsterdam": [{"orden": 1, "nombre": "Greenwoods Singel", "direccion": "Singel 103", "foto": "fotos/desayunos/greenwoods.jpg", "precio": "6–18 €", "horario": "Diario 9:00–16:00", "reserva": "No; espera ~20 min", "minutos_andando_hotel": 1, "estimado": false, "maps": "https://www.google.com/maps/search/?api=1&query=Greenwoods+Singel+103+Amsterdam"}, {"orden": 2, "nombre": "Chun Café (local de Spuistraat)", "direccion": "Spuistraat (número por confirmar: fuentes dicen 74A y 274)", "foto": "fotos/desayunos/chun.jpg", "precio": "10–20 €", "horario": "Abre 10:00 diario; cierra ~17–18:00", "reserva": "No; mucha cola (menos en Spuistraat, sin verificar)", "minutos_andando_hotel": 5, "estimado": true, "viral": true, "maps": "https://www.google.com/maps/search/?api=1&query=Chun+Café+Spuistraat+Amsterdam"}, {"orden": 3, "nombre": "The Pancake Bakery", "direccion": "Prinsengracht 191", "foto": "fotos/desayunos/pancake-bakery.jpg", "precio": "6–20 €", "horario": "Diario desde las 9:00", "reserva": "Solo grupos de 6 o más", "minutos_andando_hotel": 7, "estimado": true, "maps": "https://www.google.com/maps/search/?api=1&query=The+Pancake+Bakery+Prinsengracht+191+Amsterdam"}, {"orden": 4, "nombre": "Omelegg (centro)", "direccion": "Nieuwebrugsteeg 24 (otra guía dice Spuistraat 247: verificar)", "foto": "fotos/desayunos/omelegg.jpg", "precio": "sin verificar", "horario": "L–V 7:00–15:30/16:00; S–D 8:00–15:30", "reserva": "No", "minutos_andando_hotel": "10–15", "estimado": true, "maps": "https://www.google.com/maps/search/?api=1&query=Omelegg+Nieuwebrugsteeg+24+Amsterdam"}, {"orden": 5, "nombre": "Winkel 43", "direccion": "Noordermarkt 43 (Jordaan)", "foto": "fotos/desayunos/winkel43.jpg", "precio": "8–12 € desayuno; trozo de tarta 5–7 €", "horario": "L 7:00; M–J 8:00; V 8:00; S 7:00; D 9:00", "reserva": "No; más cola lunes y sábado (mercado)", "minutos_andando_hotel": 11, "estimado": true, "maps": "https://www.google.com/maps/search/?api=1&query=Winkel+43+Noordermarkt+43+Amsterdam"}, {"orden": 6, "nombre": "Belly Pepper", "direccion": "De Clercqstraat 128", "foto": "fotos/desayunos/belly-pepper.jpg", "precio": "16–25 €", "horario": "Mié–Dom 9:00–16:00; cerrado lun y mar", "minutos_andando_hotel": 20, "estimado": true, "maps": "https://www.google.com/maps/search/?api=1&query=Belly+Pepper+De+Clercqstraat+128+Amsterdam"}, {"orden": 7, "nombre": "Little Collins", "direccion": "Eerste Sweelinckstraat 19F", "foto": "fotos/desayunos/little-collins.jpg", "precio": "6–21 €", "horario": "Diario 9:00–16:00", "reserva": "Sin reserva", "minutos_andando_hotel": 25, "estimado": true, "maps": "https://www.google.com/maps/search/?api=1&query=Little+Collins+Eerste+Sweelinckstraat+19F+Amsterdam"}, {"orden": 8, "nombre": "Florentin", "direccion": "Eerste Sweelinckstraat 20", "foto": "fotos/desayunos/florentin.jpg", "precio": "12–19 €", "horario": "Diario 9:00–16:00", "minutos_andando_hotel": 25, "estimado": true, "maps": "https://www.google.com/maps/search/?api=1&query=Florentin+Eerste+Sweelinckstraat+20+Amsterdam"}, {"orden": 9, "nombre": "Bakers & Roasters", "direccion": "Eerste Jacob van Campenstraat 54 (De Pijp)", "foto": "fotos/desayunos/bakers-roasters.jpg", "precio": "9–20 €", "horario": "L–V 8:30–15:00; S–D 8:30–16:00", "reserva": "Colas desde ~10:00", "minutos_andando_hotel": 25, "estimado": true, "maps": "https://www.google.com/maps/search/?api=1&query=Bakers+%26+Roasters+Eerste+Jacob+van+Campenstraat+54+Amsterdam"}, {"orden": 10, "nombre": "Miri Mary", "direccion": "Van der Helstplein 15H", "foto": "fotos/desayunos/miri-mary.jpg", "precio": "14–18 €", "horario": "Brunch solo sábado y domingo 10:30–15:00", "minutos_andando_hotel": 28, "estimado": true, "maps": "https://www.google.com/maps/search/?api=1&query=Miri+Mary+Van+der+Helstplein+15H+Amsterdam"}, {"orden": 11, "nombre": "Fort Negen", "direccion": "Jan Evertsenstraat 31 (Oud-West)", "foto": "fotos/desayunos/fort-negen.jpg", "precio": "1–10 €", "horario": "Mié–Dom; cerrado lun y mar; desde 8:00 o 9:00 (fuentes distintas)", "reserva": "Cola en fin de semana", "minutos_andando_hotel": 28, "estimado": true, "maps": "https://www.google.com/maps/search/?api=1&query=Fort+Negen+Jan+Evertsenstraat+31+Amsterdam"}]};
+const FBCFG = {"apiKey": "AIzaSyBGP7QkF1-e71ln19qWKZ22JxT6FlaFWxc", "authDomain": "viaje-amsterdam.firebaseapp.com", "projectId": "viaje-amsterdam", "storageBucket": "viaje-amsterdam.firebasestorage.app", "messagingSenderId": "780340621596", "appId": "1:780340621596:web:b40f18f81ac41e527a0ad9"};
+</script>
+<script type="module">
+/* ====================== utilidades ====================== */
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const store = {
+  get(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } },
+  set(k,v){ try{ localStorage.setItem(k,v); }catch(e){} },
+  del(k){ try{ localStorage.removeItem(k); }catch(e){} }
+};
+const eur = c => new Intl.NumberFormat('es-ES',{style:'currency',currency:'EUR'}).format(c/100);
+const half = c => Math.round(c/2);
+const MES = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+const DIA = ['dom','lun','mar','mié','jue','vie','sáb'];
+const DIAL = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+function fmtFecha(f){
+  if(!f) return '';
+  if(f.includes('/')){ const [a,b]=f.split('/'); const d1=+a.slice(8,10); const d2=+(b.length<=2?b:b.slice(8,10)); const m=+a.slice(5,7); return `${d1}–${d2} ${MES[m-1]}`; }
+  const [y,m,d]=f.split('-').map(Number); return `${d} ${MES[m-1]}`;
+}
+const todayStr = () => { const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; };
+function daysBetween(a,b){ const [y1,m1,d1]=a.split('-').map(Number), [y2,m2,d2]=b.split('-').map(Number); return Math.round((Date.UTC(y2,m2-1,d2)-Date.UTC(y1,m1-1,d1))/86400000); }
+const mapsUrl = q => 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(q);
+function toast(msg){ const t=$('#toast'); t.innerHTML=`<div class="toast">${esc(msg)}</div>`; clearTimeout(toast.t); toast.t=setTimeout(()=>t.innerHTML='',3200); }
+
+const IC = {
+  home:'<path d="M4 11l8-7 8 7v8a1 1 0 0 1-1 1h-4v-6H9v6H5a1 1 0 0 1-1-1z"/>',
+  route:'<path d="M5 5h6v6H5zM13 13h6v6h-6zM8 11v5a2 2 0 0 0 2 2h3M16 13V8a2 2 0 0 0-2-2h-3"/>',
+  eat:'<path d="M7 3v8M5 3v5a2 2 0 0 0 4 0V3M7 11v10M17 21V3c-2 1-3 4-3 8h3"/>',
+  plans:'<path d="M5 5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2zM9 8h6M9 12h6M9 16h3"/>',
+  more:'<circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/>',
+  bed:'<path d="M3 18V7M3 14h18v4M21 14v-2a3 3 0 0 0-3-3h-7v5M7 11.5h.01"/>',
+  doc:'<path d="M7 3h7l5 5v11a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zM14 3v5h5M9 13h6M9 17h6"/>',
+  wallet:'<path d="M3 7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zM3 10h18M16 15h2"/>',
+  plane:'<path d="M10.5 13.5L3 11l1-1.5 8 .5 4-5.5a1.6 1.6 0 0 1 2.6 1.8L16 12l2 8-1.5 1-3.5-6.5-4 3.5-1-2z"/>',
+  warn:'<path d="M12 4l9 16H3zM12 10v4M12 17h.01"/>',
+  pin:'<path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/>',
+  walk:'<circle cx="13" cy="4.5" r="1.8"/><path d="M9 21l2.2-6L9 13l1.5-4.5L14 9l2 3.5M11.2 15l3.3 2.5L15 21M10.5 8.5L8 11"/>',
+  out:'<path d="M7 17L17 7M9 7h8v8"/>',
+  check:'<path d="M5 12.5l4.5 4.5L19 7.5"/>',
+  heart:'<path d="M12 20s-7.5-4.6-7.5-10A4.3 4.3 0 0 1 12 7.4 4.3 4.3 0 0 1 19.5 10c0 5.4-7.5 10-7.5 10z"/>',
+  plus:'<path d="M12 5v14M5 12h14"/>',
+  back:'<path d="M15 6l-6 6 6 6"/>',
+  train:'<rect x="5" y="3" width="14" height="14" rx="3"/><path d="M5 11h14M9 21l2-4M15 21l-2-4M9 14h.01M15 14h.01"/>',
+  trash:'<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>',
+  file:'<path d="M7 3h7l5 5v11a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zM14 3v5h5"/>',
+  x:'<path d="M6 6l12 12M18 6L6 18"/>',
+  key:'<circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M16 7l3 3"/>'
+};
+const ic = (n,s=22,sw=1.8) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${IC[n]}</svg>`;
+
+/* ====================== estado ====================== */
+const S = {
+  tab:'inicio', sub:null, city:'Ámsterdam', meal:'Desayuno',
+  code: store.get('viaje.code') || '',
+  yo: store.get('viaje.yo') || 'Alejandro',
+  gastos: DATA.gastos.lineas.map((l,i)=>({id:'g'+(i+1), fecha:l[0], concepto:l[1], total:Math.round(l[2]*100), pagador:'', local:true, orden:i})),
+  marcas:{}, planes:[], archivos:[], config:{},
+  online:false, dbReady:false
+};
+const CITYC = {'Ámsterdam':'var(--ams)','Brujas':'var(--bru)','Gante':'var(--bru)','Bruselas':'var(--bxl)'};
+const TRIP_START='2026-11-13', TRIP_END='2026-11-21';
+
+/* ====================== Firebase ====================== */
+let F=null, db=null;
+const colRef = n => F.collection(db,'trips',S.code,n);
+const docRef = (n,id) => F.doc(db,'trips',S.code,n,id);
+
+async function initFB(){
+  if(!S.code) return;
+  try{
+    const V='10.14.1', base=`https://www.gstatic.com/firebasejs/${V}/`;
+    const [A,Fs] = await Promise.all([import(base+'firebase-app.js'), import(base+'firebase-firestore.js')]);
+    F=Fs;
+    const app = A.initializeApp(FBCFG);
+    try{ db = F.initializeFirestore(app,{localCache:F.persistentLocalCache({tabManager:F.persistentMultipleTabManager()})}); }
+    catch(e){ db = F.getFirestore(app); }
+    S.dbReady=true;
+    listen();
+    seedGastos();
+  }catch(e){ console.error(e); S.dbReady=false; toast('Sin conexión con la base de datos: se ve la información guardada.'); }
+  render();
+}
+function listen(){
+  const err = e => { console.error(e); toast('No se pudo leer la base de datos. Revisa el código o las reglas.'); };
+  F.onSnapshot(colRef('gastos'), snap=>{
+    const arr=[]; snap.forEach(d=>arr.push({id:d.id,...d.data()}));
+    if(arr.length || !snap.metadata.fromCache){ S.gastos=arr; }
+    S.online=!snap.metadata.fromCache; render(['gastos','inicio']);
+  }, err);
+  F.onSnapshot(colRef('marcas'), snap=>{ const m={}; snap.forEach(d=>m[d.id]=d.data().v===true); S.marcas=m; render(['comer','inicio','planes','ruta','hoteles']); }, err);
+  F.onSnapshot(colRef('planes'), snap=>{ const a=[]; snap.forEach(d=>a.push({id:d.id,...d.data()})); S.planes=a; render(['planes']); }, err);
+  F.onSnapshot(colRef('archivos'), snap=>{ const a=[]; snap.forEach(d=>a.push({id:d.id,...d.data()})); S.archivos=a; render(['docs']); }, err);
+  F.onSnapshot(colRef('config'), snap=>{ const c={}; snap.forEach(d=>c[d.id]=d.data()); S.config=c; render(['hoteles','inicio']); }, err);
+}
+async function seedGastos(){
+  try{
+    const s = await F.getDoc(docRef('config','seed'));
+    if(s.exists()) return;
+    const b = F.writeBatch(db);
+    DATA.gastos.lineas.forEach((l,i)=>b.set(docRef('gastos','g'+(i+1)),{fecha:l[0],concepto:l[1],total:Math.round(l[2]*100),pagador:'',orden:i}));
+    b.set(docRef('config','seed'),{v:true});
+    await b.commit();
+  }catch(e){ console.error('seed',e); }
+}
+async function dbDo(fn){
+  if(!S.dbReady){ toast('Sin conexión con la base de datos.'); return false; }
+  try{ await fn(); return true; }catch(e){ console.error(e); toast('No se pudo guardar. Inténtalo de nuevo.'); return false; }
+}
+
+/* ====================== datos del viaje ====================== */
+const DAYS = [
+ {d:'2026-11-13', city:'Vuelos', c:'var(--fly)', title:'Vuelo Sevilla → Ámsterdam', lines:['Llegada hacia las 22:30'], pend:['aeropuerto-llegada','checkin-redox'], sleep:'Ámsterdam · The Red Ox'},
+ {d:'2026-11-14', city:'Ámsterdam', c:'var(--ams)', title:'Ámsterdam', lines:['Sin planes todavía'], sleep:'Ámsterdam · The Red Ox'},
+ {d:'2026-11-15', city:'Ámsterdam', c:'var(--ams)', title:'Casa de Ana Frank', lines:['Entradas compradas (33 €). Hora por añadir.'], sleep:'Ámsterdam · The Red Ox'},
+ {d:'2026-11-16', city:'Ámsterdam', c:'var(--ams)', title:'Ámsterdam', lines:['Sin planes todavía'], sleep:'Ámsterdam · The Red Ox'},
+ {d:'2026-11-17', city:'Brujas', c:'var(--bru)', title:'Tren Ámsterdam → Brujas', lines:['Unas 3 h con un cambio; llegada hacia mediodía','Hostel 28: a 13–15 min andando de la estación, sin ascensor'], sleep:'Brujas · Hostel 28'},
+ {d:'2026-11-18', city:'Gante', c:'var(--bru)', title:'Excursión de un día a Gante', lines:['Tren de 25–30 min; maletas en Brujas y vuelta a dormir allí'], sleep:'Brujas · Hostel 28'},
+ {d:'2026-11-19', city:'Bruselas', c:'var(--bxl)', title:'Tren Brujas → Bruselas', lines:['Por la tarde; entre 1 h y 1 h 15 min'], sleep:'Bruselas · hotel'},
+ {d:'2026-11-20', city:'Bruselas', c:'var(--bxl)', title:'Día completo en Bruselas', lines:['Sin planes todavía'], sleep:'Bruselas · hotel'},
+ {d:'2026-11-21', city:'Vuelos', c:'var(--fly)', title:'Vuelo Bruselas → Sevilla', lines:[], pend:['aeropuerto-vuelta'], sleep:''}
+];
+const PEND = {
+ 'aeropuerto-llegada':['Aeropuerto de llegada en Países Bajos','Schiphol o Eindhoven; cuadrar el último tren o bus hasta el hotel'],
+ 'checkin-redox':['Check-in tardío en The Red Ox','Llegáis hacia las 22:30; preguntar al hotel si hay recepción'],
+ 'aeropuerto-vuelta':['Aeropuerto de vuelta desde Bélgica','Zaventem o Charleroi, sábado 21']
+};
+const HOTELES = [
+ {id:'ams', city:'Ámsterdam', c:'var(--ams)', soft:'var(--ams-soft)', ink:'var(--ams-ink)', name:'The Red Ox – Super Central Canal View Rooms', addr:'Singel 89', q:'The Red Ox Singel 89 Amsterdam', fechas:'13 – 17 nov · 4 noches', notes:[], pend:['checkin-redox'], img:'amsterdam'},
+ {id:'bru', city:'Brujas', c:'var(--bru)', soft:'var(--bru-soft)', ink:'var(--bru-ink)', name:'Hostel 28', addr:'Dweerstraat 28', q:'Hostel 28 Dweerstraat 28 Brugge', fechas:'17 – 19 nov · 2 noches', notes:['A 13–15 min andando de la estación','Sin ascensor: ojo con las maletas'], pend:[], img:'brujas'},
+ {id:'bxl', city:'Bruselas', c:'var(--bxl)', soft:'var(--bxl-soft)', ink:'var(--bxl-ink)', name:'', addr:'', q:'', fechas:'19 – 21 nov · 2 noches', notes:[], pend:[], img:'bruselas', editable:true}
+];
+const DESC = {
+ 'Greenwoods Singel':'Clásico desde 1988: desayuno inglés, eggs Benedict y opciones vegetarianas, con terraza sobre el canal. Espera de unos 20 min, mejor ir temprano.',
+ 'Chun Café (local de Spuistraat)':'Sándwiches coreanos de brioche (bulgogi y langostinos) y matcha. Famosísimo en TikTok: id al local de Spuistraat, donde hay menos cola que en Berenstraat.',
+ 'The Pancake Bakery':'Pancakes holandeses, dulces y salados, en una casa del canal Prinsengracht. Solo se reserva para grupos de 6 o más personas.',
+ 'Winkel 43':'El templo de la appeltaart holandesa con nata, además de desayunos salados. Lunes y sábado hay mercado en la plaza y la cola crece.'
+};
+const BADGE = {'Greenwoods Singel':'Clásico','The Pancake Bakery':'Pancakes','Winkel 43':'Tarta de manzana'};
+const FOTOS = {'Greenwoods Singel':'greenwoods','Chun Café (local de Spuistraat)':'chun','The Pancake Bakery':'pancake-bakery','Omelegg (centro)':'omelegg','Winkel 43':'winkel43','Belly Pepper':'belly-pepper','Little Collins':'little-collins','Florentin':'florentin','Bakers & Roasters':'bakers-roasters','Miri Mary':'miri-mary','Fort Negen':'fort-negen'};
+
+/* ====================== vistas ====================== */
+function pendHtml(keys){
+  return keys.map(k=>{ const on=!!S.marcas['pend:'+k]; const [t,s]=PEND[k];
+    return `<button class="check" data-act="mark" data-k="pend:${k}"><span class="box ${on?'on':''}">${on?ic('check',16,3):''}</span><span class="stack" style="gap:1px"><span style="font-size:14px;font-weight:600;color:#3A2A0A;${on?'text-decoration:line-through;opacity:.6':''}">${esc(t)}</span><span class="small" style="color:#6B5320">${esc(s)}</span></span></button>`;
+  }).join('');
+}
+function viewInicio(){
+  const t=todayStr(); const before=daysBetween(t,TRIP_START);
+  let tag='';
+  if(before>1) tag=`Faltan ${before} días`; else if(before===1) tag='Falta 1 día'; else if(before===0) tag='¡Es hoy!';
+  else if(daysBetween(t,TRIP_END)>=0) tag=`Día ${-before+1} de 9`; else tag='Viaje terminado';
+  let day = DAYS.find(x=>x.d===t) || DAYS.find(x=>x.d>t) || DAYS[0];
+  if(t>TRIP_END) day=DAYS[DAYS.length-1];
+  const dd=new Date(day.d+'T12:00:00'); const dl=`${DIAL[dd.getDay()]} ${dd.getDate()} ${MES[dd.getMonth()]}`;
+  const isFly = day.city==='Vuelos';
+  const label = before>=0 || t<day.d ? 'Lo siguiente' : 'Hoy';
+  const pendKeys = Object.keys(PEND).filter(k=>!S.marcas['pend:'+k]);
+  const bruName = S.config.hotel_bruselas?.nombre;
+  const city = (img,col,name,dates,detail,pos='center')=>`<div class="cityrow"><div class="im"><img src="./fotos/ciudades/city_${img}.jpg" alt="" style="object-position:${pos}"></div><div style="padding:12px 14px;display:flex;flex-direction:column;gap:4px;min-width:0"><div class="row" style="gap:8px"><span class="dot" style="background:${col}"></span><h3 style="font-size:19px;line-height:24px">${name}</h3></div><div style="font-size:14px;font-weight:600">${dates}</div><div class="small muted">${detail}</div></div></div>`;
+  return `
+  <div class="hero"><img src="./fotos/ciudades/city_amsterdam.jpg" alt=""><div class="shade"></div><span class="tag">${tag}</span>
+    <div class="txt"><div style="font-size:13px;font-weight:600;letter-spacing:.3px">Viaje noviembre 2026</div><h1 style="font-size:30px;line-height:35px;letter-spacing:-.5px">Ámsterdam, Brujas, Gante y Bruselas</h1><div style="font-size:14px;font-weight:500">Vie 13 – sáb 21 nov · 8 noches · 2 personas</div></div></div>
+  <div class="pad stack-l">
+    <div class="stack" style="gap:10px"><h2 class="h2">${label}</h2>
+      <div style="background:${isFly?'var(--fly-soft)':'#fff'};border:1px solid ${isFly?'#BCD3FA':'var(--line)'};border-radius:20px;padding:16px;display:flex;flex-direction:column;gap:12px;color:${isFly?'var(--fly-ink)':'var(--ink)'}">
+        <div class="row" style="gap:12px"><span style="width:44px;height:44px;border-radius:22px;background:${day.c.replace('var(--','').replace(')','')==='fly'?'var(--fly)':day.c};color:#fff;display:flex;align-items:center;justify-content:center;flex:none">${ic(isFly?'plane':(day.title.startsWith('Tren')?'train':'pin'),24)}</span>
+        <div class="stack" style="gap:2px"><div class="small" style="font-weight:600">${dl}</div><div style="font-family:'Space Grotesk';font-size:20px;line-height:25px;font-weight:700">${esc(day.title)}</div></div></div>
+        ${day.lines.length?`<div class="wrap">${day.lines.map(l=>`<span class="chip" style="background:#fff">${esc(l)}</span>`).join('')}</div>`:''}
+        <button class="btn ${isFly?'fly':'ghost'}" data-act="go" data-tab="ruta">Ver la ruta completa</button>
+      </div></div>
+    <div class="stack" style="gap:10px"><h2 class="h2">Tu viaje</h2>
+      ${city('amsterdam','var(--ams)','Ámsterdam','Vie 13 – mar 17 · 4 noches','The Red Ox · Singel 89','center 30%')}
+      ${city('brujas','var(--bru)','Brujas','Mar 17 – jue 19 · 2 noches','Hostel 28 · Dweerstraat 28')}
+      ${city('gante','var(--bru)','Gante','Mié 18 · excursión de un día','Vuelta a dormir a Brujas')}
+      ${city('bruselas','var(--bxl)','Bruselas','Jue 19 – sáb 21 · 2 noches', bruName?esc(bruName):'Hotel · nombre por añadir')}
+    </div>
+    <div class="stack" style="gap:10px"><h2 class="h2">Todo en un sitio</h2>
+      <div class="row" style="gap:10px;align-items:stretch">
+        <button class="tile" style="background:var(--ams-soft);color:var(--ams-ink)" data-act="sub" data-sub="hoteles"><span class="o">${ic('bed')}</span><span><span style="display:block;font-family:'Space Grotesk';font-size:17px;font-weight:700">Hoteles</span><span class="small" style="font-weight:500">3 alojamientos</span></span></button>
+        <button class="tile" style="background:var(--fly-soft);color:var(--fly-ink)" data-act="sub" data-sub="docs"><span class="o">${ic('doc')}</span><span><span style="display:block;font-family:'Space Grotesk';font-size:17px;font-weight:700">Documentos</span><span class="small" style="font-weight:500">${S.archivos.length?S.archivos.length+' guardados':'Billetes y entradas'}</span></span></button>
+        <button class="tile" style="background:var(--bru-soft);color:var(--bru-ink)" data-act="sub" data-sub="gastos"><span class="o">${ic('wallet')}</span><span><span style="display:block;font-family:'Space Grotesk';font-size:17px;font-weight:700">Gastos</span><span class="small" style="font-weight:500">${eur(half(totalGastos()))} por persona</span></span></button>
+      </div></div>
+    ${pendKeys.length?`<div style="background:var(--warn-bg);border:1px solid var(--warn-line);border-radius:20px;padding:16px;display:flex;flex-direction:column;gap:14px"><div class="row" style="color:var(--warn-ink)">${ic('warn')}<h2 style="font-size:18px;line-height:24px">Por confirmar</h2></div>${pendHtml(pendKeys)}</div>`:''}
+  </div>`;
+}
+function viewRuta(){
+  const t=todayStr();
+  return `<div class="pad stack-l"><div class="stack" style="gap:4px"><h1 style="font-size:30px">Ruta</h1><div class="muted">Día a día, del viernes 13 al sábado 21 de noviembre</div></div>
+  <div class="stack">${DAYS.map(x=>{ const dd=new Date(x.d+'T12:00:00');
+    return `<div class="daycard ${x.d===t?'today':''}" style="--c:${x.c}"><div class="row" style="justify-content:space-between"><div class="small" style="font-weight:700;text-transform:uppercase;letter-spacing:.5px">${DIA[dd.getDay()]} ${dd.getDate()} ${MES[dd.getMonth()]}</div><span class="chip" style="background:#fff;border:1px solid var(--line)"><span class="dot" style="background:${x.c}"></span>${x.city}</span></div>
+      <div style="font-family:'Space Grotesk';font-size:19px;font-weight:700">${esc(x.title)}</div>
+      ${x.lines.map(l=>`<div class="muted small">${esc(l)}</div>`).join('')}
+      ${x.pend&&x.pend.length?`<div style="background:var(--warn-bg);border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:10px">${pendHtml(x.pend)}</div>`:''}
+      ${x.sleep?`<div class="row small muted" style="gap:6px">${ic('bed',16)} Dormís en ${esc(x.sleep)}</div>`:''}</div>`; }).join('')}</div></div>`;
+}
+function viewComer(){
+  const cities=['Ámsterdam','Brujas','Gante','Bruselas'], meals=['Desayuno','Comida','Cena'];
+  const hasData = S.city==='Ámsterdam' && S.meal==='Desayuno';
+  let body='';
+  if(hasData){
+    body = `<div class="small muted">Ordenados del más cercano al más lejano del hotel. Los minutos andando son estimados (salvo Greenwoods): compruébalos en Maps.</div>` + DATA.desayunos_amsterdam.map(p=>{
+      const key=(FOTOS[p.nombre]||p.nombre); const prob=!!S.marcas['probado:'+key], fav=!!S.marcas['fav:'+key];
+      const mins = p.minutos_andando_hotel; const walk = `${p.estimado?'≈ ':''}${mins} min andando del hotel`;
+      const badge = p.viral ? '<span class="badge hot">Sí o sí · viral</span>' : (BADGE[p.nombre]?`<span class="badge">${BADGE[p.nombre]}</span>`:'');
+      return `<div class="card">
+        <div class="photo"><img src="./${p.foto}" alt="${esc(p.nombre)}" loading="lazy">${badge}</div>
+        <div class="card-p stack" style="gap:10px">
+          <div><h2 style="font-size:22px;line-height:28px">${p.orden}. ${esc(p.nombre)}</h2>
+            <div class="row small muted" style="gap:6px;align-items:flex-start;margin-top:2px"><span style="margin-top:1px">${ic('pin',16)}</span><span>${esc(p.direccion)}</span></div></div>
+          <div class="wrap"><span class="chip walk">${ic('walk',14,2)}${walk}</span><span class="chip price">${esc(p.precio)}</span><span class="chip">${esc(p.horario)}</span>${p.reserva?`<span class="chip">${esc(p.reserva)}</span>`:''}</div>
+          ${DESC[p.nombre]?`<p style="margin:0;font-size:14px;line-height:21px;color:#3D352C">${esc(DESC[p.nombre])}</p>`:''}
+          <div class="row" style="gap:8px">
+            <a class="btn ams" href="${p.maps}" target="_blank" rel="noopener" style="flex:1">Abrir en Google Maps ${ic('out',18,2)}</a>
+            <button class="iconbtn ${fav?'on':''}" data-act="mark" data-k="fav:${key}" aria-label="Favorito" aria-pressed="${fav}">${ic('heart')}</button>
+            <button class="iconbtn ${prob?'ok':''}" data-act="mark" data-k="probado:${key}" aria-label="Probado" aria-pressed="${prob}">${ic('check',22,2.4)}</button>
+          </div>
+          ${(fav||prob)?`<div class="small muted">${prob?'Probado ':''}${fav&&prob?'· ':''}${fav?'Favorito':''}</div>`:''}
+        </div></div>`;
+    }).join('');
+  } else {
+    body = `<div class="empty"><div style="font-weight:700;color:var(--ink);margin-bottom:4px">${S.meal} en ${S.city}</div>Aún no hay sitios aquí. Los iremos añadiendo cuando cerremos la lista.</div>`;
+  }
+  return `<div class="stack" style="padding-top:20px;gap:14px">
+    <div style="padding:0 20px"><div class="small muted" style="font-weight:600">Viaje noviembre 2026</div><h1 style="font-size:30px">Comer</h1></div>
+    <div class="pills">${cities.map(c=>`<button class="pill ${S.city===c?'on':''}" style="--c:${CITYC[c]}" data-act="city" data-v="${c}">${c==='Ámsterdam'?'':`<span class="dot" style="background:${CITYC[c]}"></span>`}${c}</button>`).join('')}</div>
+    <div style="padding:0 20px"><div class="seg">${meals.map(m=>`<button class="${S.meal===m?'on':''}" data-act="meal" data-v="${m}">${m}</button>`).join('')}</div></div>
+    <div class="stack" style="padding:0 20px">${body}</div></div>`;
+}
+function viewPlanes(){
+  return `<div class="pad stack-l"><div class="stack" style="gap:4px"><h1 style="font-size:30px">Planes</h1><div class="muted">Lo que ya está fijado y lo que vayáis añadiendo. Lo que añade uno lo ve el otro.</div></div>
+  <div class="stack">${DAYS.map(x=>{ const dd=new Date(x.d+'T12:00:00'); const mine=S.planes.filter(p=>p.dia===x.d).sort((a,b)=>(a.hora||'99').localeCompare(b.hora||'99'));
+    const fixed = x.d==='2026-11-15' ? ['Casa de Ana Frank: entradas compradas (hora por añadir)'] : (x.d==='2026-11-18'?['Gante en tren (25–30 min)']:[]);
+    return `<div class="daycard" style="--c:${x.c}"><div class="row" style="justify-content:space-between"><div class="small" style="font-weight:700;text-transform:uppercase;letter-spacing:.5px">${DIA[dd.getDay()]} ${dd.getDate()} ${MES[dd.getMonth()]} · ${x.city}</div><button class="iconbtn" style="width:44px;height:44px" data-act="addplan" data-d="${x.d}" aria-label="Añadir plan">${ic('plus')}</button></div>
+    ${fixed.map(f=>`<div style="font-size:15px;font-weight:600">${esc(f)}</div>`).join('')}
+    ${mine.map(p=>`<button class="check" data-act="editplan" data-id="${p.id}" style="align-items:center"><span class="stack" style="gap:0;flex:1"><span style="font-size:15px;font-weight:600">${p.hora?esc(p.hora)+' · ':''}${esc(p.texto)}</span></span><span class="muted small">Editar</span></button>`).join('')}
+    ${!fixed.length&&!mine.length?'<div class="small muted">Sin planes todavía</div>':''}</div>`; }).join('')}</div></div>`;
+}
+function viewMas(){
+  const row=(sub,icn,title,sub2,c,soft)=>`<button class="listrow" data-act="sub" data-sub="${sub}"><span style="width:44px;height:44px;border-radius:22px;background:${soft};color:${c};display:flex;align-items:center;justify-content:center;flex:none">${ic(icn)}</span><span class="stack" style="gap:0;flex:1"><span style="font-weight:700;font-size:17px">${title}</span><span class="small muted">${sub2}</span></span>${ic('back',20).replace('M15 6l-6 6 6 6','M9 6l6 6-6 6')}</button>`;
+  return `<div class="pad stack-l"><h1 style="font-size:30px">Más</h1><div class="stack">
+    ${row('hoteles','bed','Hoteles','Dirección, fechas y notas de cada alojamiento','var(--ams-ink)','var(--ams-soft)')}
+    ${row('docs','doc','Documentos','Billetes, entradas y reservas','var(--fly-ink)','var(--fly-soft)')}
+    ${row('gastos','wallet','Gastos','Total y reparto a partes iguales','var(--bru-ink)','var(--bru-soft)')}</div>
+    <div class="stack"><div class="small muted">Eres <b>${esc(S.yo)}</b> en este móvil.</div>
+    <div class="row" style="gap:8px"><button class="btn ghost sm" data-act="chyo" style="flex:1">Cambiar quién soy</button><button class="btn ghost sm" data-act="chcode" style="flex:1">${ic('key',18)} Cambiar código</button></div></div></div>`;
+}
+function backBar(title){ return `<div class="row" style="padding:12px 12px 0"><button class="iconbtn" data-act="back" aria-label="Volver">${ic('back')}</button><span class="small muted" style="font-weight:600">Más</span></div><div style="padding:8px 20px 0"><h1 style="font-size:30px">${title}</h1></div>`; }
+function viewHoteles(){
+  return backBar('Hoteles') + `<div class="pad stack">${HOTELES.map(h=>{
+    const name = h.editable ? (S.config.hotel_bruselas?.nombre||'') : h.name;
+    const addr = h.editable ? (S.config.hotel_bruselas?.direccion||'') : h.addr;
+    const q = h.editable ? (name?name+' '+addr+' Bruxelles':'') : h.q;
+    return `<div class="card"><div style="height:120px;position:relative"><img src="./fotos/ciudades/city_${h.img}.jpg" alt="" style="width:100%;height:100%;object-fit:cover;display:block"><span class="badge" style="color:${h.ink};background:${h.soft}">${h.city}</span></div>
+    <div class="card-p stack" style="gap:10px"><div><h2 style="font-size:20px;line-height:26px">${name?esc(name):'Nombre por añadir'}</h2>${addr?`<div class="row small muted" style="gap:6px;margin-top:2px">${ic('pin',16)}${esc(addr)}</div>`:''}</div>
+    <div class="wrap"><span class="chip price" style="background:${h.soft};color:${h.ink}">${h.fechas}</span>${h.notes.map(n=>`<span class="chip">${esc(n)}</span>`).join('')}</div>
+    ${h.pend.length?`<div style="background:var(--warn-bg);border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:10px">${pendHtml(h.pend)}</div>`:''}
+    <div class="row" style="gap:8px">${q?`<a class="btn ams" href="${mapsUrl(q)}" target="_blank" rel="noopener" style="flex:1">Abrir en Google Maps ${ic('out',18,2)}</a>`:''}${h.editable?`<button class="btn ghost" data-act="edithotel" style="${q?'width:auto':'flex:1'}">${name?'Editar':'Añadir datos del hotel'}</button>`:''}</div>
+    </div></div>`; }).join('')}</div>`;
+}
+const CATS=['Vuelos','Hoteles','Trenes','Entradas','Otros'];
+function viewDocs(){
+  const by = c=>S.archivos.filter(a=>a.cat===c).sort((a,b)=>(a.titulo||'').localeCompare(b.titulo||''));
+  return backBar('Documentos') + `<div class="pad stack-l"><div class="muted small">Sube fotos o PDF pequeños (hasta ≈ 650 KB) de billetes, entradas y reservas, o pega un enlace. Los ven los dos móviles.</div>
+  <button class="btn fly" data-act="adddoc">${ic('plus')} Añadir documento</button>
+  ${S.archivos.length?CATS.filter(c=>by(c).length).map(c=>`<div class="stack" style="gap:8px"><h2 class="h2">${c}</h2>${by(c).map(a=>`<button class="listrow" data-act="opendoc" data-id="${a.id}"><span style="width:44px;height:44px;border-radius:22px;background:var(--fly-soft);color:var(--fly-ink);display:flex;align-items:center;justify-content:center;flex:none">${ic('file')}</span><span class="stack" style="gap:0;flex:1;min-width:0"><span style="font-weight:700;overflow:hidden;text-overflow:ellipsis">${esc(a.titulo)}</span><span class="small muted">${a.link?'Enlace':esc(a.nombre||'Archivo')}</span></span></button>`).join('')}</div>`).join(''):`<div class="empty">Aún no hay documentos.<br>Empieza con los billetes de avión.</div>`}</div>`;
+}
+function totalGastos(){ return S.gastos.reduce((s,g)=>s+(g.total||0),0); }
+function viewGastos(){
+  const list=[...S.gastos].sort((a,b)=>(a.fecha||'').slice(0,10).localeCompare((b.fecha||'').slice(0,10)) || (a.orden??99)-(b.orden??99));
+  const tot=totalGastos();
+  const A=list.filter(g=>g.pagador==='Alejandro').reduce((s,g)=>s+g.total,0), B=list.filter(g=>g.pagador==='Pareja').reduce((s,g)=>s+g.total,0);
+  const net=Math.round((A-B)/2);
+  const bal = (A||B) ? (net>0?`Pareja debe <b>${eur(net)}</b> a Alejandro`:(net<0?`Alejandro debe <b>${eur(-net)}</b> a Pareja`:'Estáis en paz')) : 'Indica quién pagó cada gasto para ver el saldo';
+  return backBar('Gastos') + `<div class="pad stack-l">
+   <div style="background:var(--bru-soft);border:1px solid #BFE0CC;border-radius:20px;padding:18px;display:flex;flex-direction:column;gap:6px;color:var(--bru-ink)">
+     <div class="row" style="justify-content:space-between"><span class="small" style="font-weight:600">Total del viaje</span><span class="status ${S.online?'ok':'off'}"><i></i>${S.online?'Sincronizado':'Sin conexión'}</span></div>
+     <div style="font-family:'Space Grotesk';font-size:34px;line-height:40px;font-weight:700">${eur(tot)}</div>
+     <div style="font-size:16px;font-weight:600">${eur(half(tot))} por persona</div>
+     <div class="small" style="margin-top:4px">${bal}</div></div>
+   <button class="btn ams" data-act="addgasto">${ic('plus')} Añadir gasto</button>
+   <div class="stack" style="gap:8px">${list.map(g=>`<button class="listrow" data-act="editgasto" data-id="${g.id}"><span class="stack" style="gap:0;flex:1;min-width:0"><span style="font-weight:700">${esc(g.concepto)}</span><span class="small muted">${fmtFecha(g.fecha)}${g.pagador?' · pagó '+esc(g.pagador):''}</span></span><span class="stack" style="gap:0;text-align:right"><span style="font-weight:700">${eur(g.total)}</span><span class="small muted">${eur(half(g.total))} c/u</span></span></button>`).join('')}</div></div>`;
+}
+
+/* ====================== render ====================== */
+function currentName(){ return S.sub || S.tab; }
+function render(only){
+  if(!S.code){ renderGate(); return; }
+  if(only && !only.includes(currentName())) { renderTabs(); return; }
+  const v={inicio:viewInicio,ruta:viewRuta,comer:viewComer,planes:viewPlanes,mas:viewMas,hoteles:viewHoteles,docs:viewDocs,gastos:viewGastos}[currentName()];
+  const y=window.scrollY; $('#view').innerHTML=v(); renderTabs(); if(only) window.scrollTo(0,y);
+}
+function renderTabs(){
+  if(!S.code){ $('#tabs').innerHTML=''; return; }
+  const items=[['inicio','home','Inicio'],['ruta','route','Ruta'],['comer','eat','Comer'],['planes','plans','Planes'],['mas','more','Más']];
+  const cur=S.sub?'mas':S.tab;
+  $('#tabs').innerHTML=`<nav class="tabbar" aria-label="Secciones">${items.map(([k,i,l])=>`<button class="${cur===k?'on':''}" data-act="tab" data-tab="${k}" ${cur===k?'aria-current="page"':''}><span class="ic">${ic(i)}</span>${l}</button>`).join('')}</nav>`;
+}
+function renderGate(){
+  $('#tabs').innerHTML='';
+  $('#view').innerHTML=`<div class="gate"><div class="stack" style="gap:6px"><div class="small muted" style="font-weight:600">Viaje noviembre 2026</div><h1 style="font-size:32px;line-height:38px">Ámsterdam, Brujas, Gante y Bruselas</h1></div>
+   <label class="f">Código del viaje<input class="in" id="code" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="El que os habéis pasado"></label>
+   <div class="stack" style="gap:6px"><div style="font-weight:600;font-size:14px">¿Quién eres?</div><div class="seg" id="yoseg"><button class="on" data-yo="Alejandro">Alejandro</button><button data-yo="Pareja">Pareja</button></div></div>
+   <button class="btn ams" id="entrar">Entrar</button><div class="small muted">El código lo guarda este móvil; solo hay que escribirlo una vez.</div></div>`;
+  let yo=S.yo; $('#yoseg').onclick=e=>{ const b=e.target.closest('button'); if(!b) return; yo=b.dataset.yo; [...$('#yoseg').children].forEach(x=>x.classList.toggle('on',x===b)); };
+  [...$('#yoseg').children].forEach(x=>x.classList.toggle('on',x.dataset.yo===yo));
+  $('#entrar').onclick=()=>{ const c=$('#code').value.trim(); if(c.length<8){ toast('El código debe tener al menos 8 caracteres.'); return; } S.code=c; S.yo=yo; store.set('viaje.code',c); store.set('viaje.yo',yo); render(); initFB(); };
+}
+
+/* ====================== hojas (formularios) ====================== */
+function openSheet(html){ $('#sheet').innerHTML=`<div class="sheetbg" data-act="closesheet"><div class="sheet" role="dialog" aria-modal="true">${html}</div></div>`; }
+function closeSheet(){ $('#sheet').innerHTML=''; }
+const sheetHead=t=>`<div class="row" style="justify-content:space-between"><h2 style="font-size:22px">${t}</h2><button class="iconbtn" data-act="closesheet" aria-label="Cerrar">${ic('x')}</button></div>`;
+
+function sheetGasto(g){
+  const nuevo=!g; g=g||{fecha:(todayStr()>=TRIP_START&&todayStr()<=TRIP_END)?todayStr():TRIP_START, concepto:'', total:0, pagador:S.yo};
+  const fechaVal=(g.fecha||'').slice(0,10);
+  openSheet(`${sheetHead(nuevo?'Añadir gasto':'Editar gasto')}
+   <label class="f">Concepto<input class="in" id="g-c" value="${esc(g.concepto)}" placeholder="Cena, tren, entradas…"></label>
+   <label class="f">Importe total (€)<input class="in" id="g-t" inputmode="decimal" value="${g.total?(g.total/100).toFixed(2).replace('.',','):''}" placeholder="0,00"></label>
+   <label class="f">Fecha<input class="in" id="g-f" type="date" value="${fechaVal}"></label>
+   <label class="f">Quién pagó<select class="in" id="g-p"><option value="" ${!g.pagador?'selected':''}>Sin indicar</option><option ${g.pagador==='Alejandro'?'selected':''}>Alejandro</option><option ${g.pagador==='Pareja'?'selected':''}>Pareja</option></select></label>
+   <div class="small muted" id="g-h">Se reparte a partes iguales.</div>
+   <button class="btn ams" id="g-ok">Guardar</button>${nuevo?'':`<button class="btn danger" id="g-del">${ic('trash',18)} Borrar gasto</button>`}`);
+  const upd=()=>{ const v=parseImporte($('#g-t').value); $('#g-h').textContent = v?`${eur(half(v))} por persona`:'Se reparte a partes iguales.'; };
+  $('#g-t').oninput=upd; upd();
+  $('#g-ok').onclick=async()=>{
+    const c=$('#g-c').value.trim(), t=parseImporte($('#g-t').value), f=$('#g-f').value;
+    if(!c){ toast('Pon un concepto.'); return; } if(!t){ toast('Pon un importe válido.'); return; }
+    const data={concepto:c,total:t,fecha:f||TRIP_START,pagador:$('#g-p').value,orden:g.orden??50};
+    const ok = await dbDo(()=> nuevo ? F.addDoc(colRef('gastos'),{...data,creado:Date.now(),orden:50}) : F.setDoc(docRef('gastos',g.id),data));
+    if(ok) closeSheet();
+  };
+  if(!nuevo) $('#g-del').onclick=async()=>{ if(!confirm('¿Borrar este gasto?')) return; const ok=await dbDo(()=>F.deleteDoc(docRef('gastos',g.id))); if(ok) closeSheet(); };
+}
+function parseImporte(s){ const n=Number(String(s).trim().replace(/\s/g,'').replace(/\.(?=\d{3}\b)/g,'').replace(',','.')); return (isFinite(n)&&n>0)?Math.round(n*100):0; }
+
+function sheetPlan(dia,p){
+  const nuevo=!p; p=p||{hora:'',texto:''};
+  openSheet(`${sheetHead(nuevo?'Añadir plan':'Editar plan')}<div class="small muted">${fmtFecha(dia)}</div>
+   <label class="f">Hora (opcional)<input class="in" id="p-h" type="time" value="${esc(p.hora)}"></label>
+   <label class="f">Plan<textarea class="in" id="p-t" placeholder="Qué vais a hacer, dónde, si hay que reservar…">${esc(p.texto)}</textarea></label>
+   <button class="btn ams" id="p-ok">Guardar</button>${nuevo?'':`<button class="btn danger" id="p-del">${ic('trash',18)} Borrar plan</button>`}`);
+  $('#p-ok').onclick=async()=>{ const t=$('#p-t').value.trim(); if(!t){ toast('Escribe el plan.'); return; }
+    const ok=await dbDo(()=> nuevo ? F.addDoc(colRef('planes'),{dia,hora:$('#p-h').value,texto:t,creado:Date.now()}) : F.setDoc(docRef('planes',p.id),{dia,hora:$('#p-h').value,texto:t,creado:p.creado||Date.now()}));
+    if(ok) closeSheet(); };
+  if(!nuevo) $('#p-del').onclick=async()=>{ const ok=await dbDo(()=>F.deleteDoc(docRef('planes',p.id))); if(ok) closeSheet(); };
+}
+function sheetHotel(){
+  const c=S.config.hotel_bruselas||{};
+  openSheet(`${sheetHead('Hotel de Bruselas')}
+   <label class="f">Nombre<input class="in" id="h-n" value="${esc(c.nombre||'')}"></label>
+   <label class="f">Dirección<input class="in" id="h-d" value="${esc(c.direccion||'')}"></label>
+   <button class="btn ams" id="h-ok">Guardar</button>`);
+  $('#h-ok').onclick=async()=>{ const ok=await dbDo(()=>F.setDoc(docRef('config','hotel_bruselas'),{nombre:$('#h-n').value.trim(),direccion:$('#h-d').value.trim()})); if(ok) closeSheet(); };
+}
+const MAXB=650*1024;
+function sheetDoc(){
+  openSheet(`${sheetHead('Añadir documento')}
+   <label class="f">Título<input class="in" id="d-t" placeholder="Vuelo ida Sevilla → Ámsterdam"></label>
+   <label class="f">Categoría<select class="in" id="d-c">${CATS.map(c=>`<option>${c}</option>`).join('')}</select></label>
+   <label class="f">Archivo (foto o PDF, hasta ≈ 650 KB)<input class="in" id="d-f" type="file" accept="image/*,application/pdf" style="padding:10px 12px;height:auto"></label>
+   <label class="f">…o un enlace (si el archivo pesa mucho)<input class="in" id="d-l" inputmode="url" placeholder="https://"></label>
+   <div class="small muted" id="d-m"></div>
+   <button class="btn fly" id="d-ok">Guardar</button>`);
+  $('#d-ok').onclick=async()=>{
+    const titulo=$('#d-t').value.trim(), cat=$('#d-c').value, file=$('#d-f').files[0], link=$('#d-l').value.trim();
+    if(!titulo){ toast('Pon un título.'); return; } if(!file&&!link){ toast('Elige un archivo o pega un enlace.'); return; }
+    if(link && !/^https?:\/\//i.test(link)){ toast('El enlace debe empezar por http o https.'); return; }
+    const btn=$('#d-ok'); btn.disabled=true; $('#d-m').textContent='Guardando…';
+    try{
+      const meta={titulo,cat,creado:Date.now()}; let data=null;
+      if(file){
+        let blob=file;
+        if(file.type.startsWith('image/')) blob=await shrinkImage(file);
+        else if(file.type!=='application/pdf'){ throw new Error('Solo fotos o PDF.'); }
+        if(blob.size>MAXB) throw new Error('El archivo pesa demasiado ('+Math.round(blob.size/1024)+' KB). Usa un enlace o una foto más pequeña.');
+        data=await toDataURL(blob); meta.nombre=file.name; meta.tipo=blob.type;
+      } else meta.link=link;
+      const ok=await dbDo(async()=>{ const ref=await F.addDoc(colRef('archivos'),meta); if(data) await F.setDoc(docRef('blobs',ref.id),{data}); });
+      if(ok) closeSheet(); else { btn.disabled=false; $('#d-m').textContent=''; }
+    }catch(e){ btn.disabled=false; $('#d-m').textContent=''; toast(e.message||'No se pudo guardar.'); }
+  };
+}
+function toDataURL(b){ return new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=rej; r.readAsDataURL(b); }); }
+async function shrinkImage(file){
+  const bmp = await createImageBitmap(file);
+  let max=1800, q=.82, blob;
+  for(let i=0;i<6;i++){
+    const k=Math.min(1,max/Math.max(bmp.width,bmp.height)); const c=document.createElement('canvas'); c.width=Math.round(bmp.width*k); c.height=Math.round(bmp.height*k);
+    c.getContext('2d').drawImage(bmp,0,0,c.width,c.height);
+    blob=await new Promise(r=>c.toBlob(r,'image/jpeg',q)); if(blob.size<=MAXB) return blob; max*=.8; q-=.06;
+  }
+  return blob;
+}
+async function sheetOpenDoc(id){
+  const a=S.archivos.find(x=>x.id===id); if(!a) return;
+  openSheet(`${sheetHead(esc(a.titulo))}<div class="small muted">${esc(a.cat)}${a.link?'':' · '+esc(a.nombre||'')}</div><div id="d-body" class="stack"><div class="empty">Cargando…</div></div><button class="btn danger" id="d-del">${ic('trash',18)} Borrar documento</button>`);
+  $('#d-del').onclick=async()=>{ if(!confirm('¿Borrar este documento?')) return; const ok=await dbDo(async()=>{ await F.deleteDoc(docRef('archivos',id)); if(!a.link) await F.deleteDoc(docRef('blobs',id)); }); if(ok) closeSheet(); };
+  if(a.link){ $('#d-body').innerHTML=`<a class="btn fly" href="${esc(a.link)}" target="_blank" rel="noopener">Abrir enlace ${ic('out',18,2)}</a>`; return; }
+  try{
+    const s=await F.getDoc(docRef('blobs',id)); if(!s.exists()) throw new Error('nada');
+    const data=s.data().data; const blob=await (await fetch(data)).blob(); const url=URL.createObjectURL(blob);
+    $('#d-body').innerHTML = (a.tipo||'').startsWith('image/') ? `<img src="${url}" alt="" style="width:100%;border-radius:14px;border:1px solid var(--line)"><a class="btn fly" href="${url}" download="${esc(a.nombre||a.titulo)}">Descargar</a>`
+      : `<a class="btn fly" href="${url}" target="_blank" rel="noopener">Abrir PDF ${ic('out',18,2)}</a><a class="btn ghost" href="${url}" download="${esc(a.nombre||a.titulo+'.pdf')}">Descargar</a>`;
+  }catch(e){ $('#d-body').innerHTML='<div class="empty">No se pudo cargar el archivo. ¿Hay conexión?</div>'; }
+}
+
+/* ====================== eventos ====================== */
+document.addEventListener('click', async e=>{
+  const el=e.target.closest('[data-act]'); if(!el) return; const a=el.dataset.act;
+  if(a==='closesheet'){ if(e.target===el||el.classList.contains('iconbtn')||el.closest('.iconbtn')) closeSheet(); return; }
+  if(a==='tab'){ S.tab=el.dataset.tab; S.sub=null; render(); window.scrollTo(0,0); }
+  else if(a==='go'){ S.tab=el.dataset.tab; S.sub=null; render(); window.scrollTo(0,0); }
+  else if(a==='sub'){ S.sub=el.dataset.sub; render(); window.scrollTo(0,0); }
+  else if(a==='back'){ S.sub=null; S.tab='mas'; render(); window.scrollTo(0,0); }
+  else if(a==='city'){ S.city=el.dataset.v; render(); }
+  else if(a==='meal'){ S.meal=el.dataset.v; render(); }
+  else if(a==='mark'){ const k=el.dataset.k; const nv=!S.marcas[k]; S.marcas[k]=nv; render(); await dbDo(()=>F.setDoc(docRef('marcas',k),{v:nv})); }
+  else if(a==='addgasto') sheetGasto();
+  else if(a==='editgasto'){ const g=S.gastos.find(x=>x.id===el.dataset.id); if(g) sheetGasto(g); }
+  else if(a==='addplan') sheetPlan(el.dataset.d);
+  else if(a==='editplan'){ const p=S.planes.find(x=>x.id===el.dataset.id); if(p) sheetPlan(p.dia,p); }
+  else if(a==='edithotel') sheetHotel();
+  else if(a==='adddoc') sheetDoc();
+  else if(a==='opendoc') sheetOpenDoc(el.dataset.id);
+  else if(a==='chyo'){ S.yo=S.yo==='Alejandro'?'Pareja':'Alejandro'; store.set('viaje.yo',S.yo); render(); toast('Ahora eres '+S.yo+'.'); }
+  else if(a==='chcode'){ if(confirm('¿Cambiar el código del viaje en este móvil?')){ store.del('viaje.code'); S.code=''; location.reload(); } }
+});
+window.addEventListener('online',()=>render()); window.addEventListener('offline',()=>{S.online=false;render();});
+
+/* ====================== arranque ====================== */
+(function(){ const p=new URLSearchParams(location.search); const c=p.get('c'); if(c&&c.length>=8){ S.code=c; store.set('viaje.code',c); history.replaceState(null,'',location.pathname); } })();
+render();
+initFB();
+if('serviceWorker' in navigator){ window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{})); }
+</script>
+</body>
+</html>
