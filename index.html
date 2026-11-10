@@ -464,7 +464,7 @@ function viewPlanes(){
    <div class="dhero" style="--c:${sel.c}"><div class="small" style="font-weight:700;text-transform:uppercase;letter-spacing:.6px">${DIAL[dd.getDay()]} ${dd.getDate()} ${MES[dd.getMonth()]} · ${esc(sel.city)}</div>
      <div style="font-family:'Space Grotesk';font-size:24px;line-height:30px;font-weight:700">${esc(sel.title)}</div>
      ${sel.sleep?`<div class="row small" style="gap:6px">${ic('bed',16)} Dormís en ${esc(sel.sleep)}</div>`:''}
-     ${info.map(l=>`<div class="small" style="opacity:.85">${esc(l)}</div>`).join('')}${rutaUrl?`<button class="btn sm" data-act="openlink" data-u="${esc(rutaUrl)}" style="background:#fff;color:var(--ink);align-self:flex-start">${ic('route',18)} Ver ruta (${stops.length} parada${stops.length===1?'':'s'})</button>`:''}</div>
+     ${info.map(l=>`<div class="small" style="opacity:.85">${esc(l)}</div>`).join('')}${rutaUrl?`<button class="btn sm" data-act="openlink" data-u="${esc(rutaUrl)}" style="background:#fff;color:var(--ink);align-self:flex-start">${ic('route',18)} Ver ruta (${stops.length} parada${stops.length===1?'':'s'})</button>`:`<div class="small" style="opacity:.75">${ic('route',14)} Pon «Lugar para el mapa» en un plan o añade un restaurante al día y aparecerá «Ver ruta».</div>`}</div>
    <button class="btn ams" data-act="addchoose" data-d="${sel.d}">${ic('plus')} Añadir al día</button>
    ${rows.length?`<div class="tline">${rows.map(row).join('')}</div>`:`<div class="empty"><div style="font-weight:700;color:var(--ink);margin-bottom:4px">Día libre</div>Nada fijado todavía. Añade un plan o un restaurante con el botón de arriba, o con el + desde la pestaña Comer.</div>`}
   </div></div>`;
