@@ -248,7 +248,7 @@ async function dbDo(fn){
 const DAYS = [
  {d:'2026-11-13', city:'Vuelos', c:'var(--fly)', title:'Vuelo Sevilla → Ámsterdam', lines:['Llegada hacia las 22:30'], pend:['aeropuerto-llegada','checkin-redox'], sleep:'Ámsterdam · The Red Ox'},
  {d:'2026-11-14', city:'Ámsterdam', c:'var(--ams)', title:'Ámsterdam', lines:['Sin planes todavía'], sleep:'Ámsterdam · The Red Ox'},
- {d:'2026-11-15', city:'Ámsterdam', c:'var(--ams)', title:'Casa de Ana Frank', lines:['Entradas compradas (33 €). Hora por añadir.'], sleep:'Ámsterdam · The Red Ox'},
+ {d:'2026-11-15', city:'Ámsterdam', c:'var(--ams)', title:'Casa de Ana Frank', lines:['Entrada 9:30–9:45 (33 €, 2 personas)'], sleep:'Ámsterdam · The Red Ox'},
  {d:'2026-11-16', city:'Ámsterdam', c:'var(--ams)', title:'Ámsterdam', lines:['Sin planes todavía'], sleep:'Ámsterdam · The Red Ox'},
  {d:'2026-11-17', city:'Brujas', c:'var(--bru)', title:'Tren Ámsterdam → Brujas', lines:['Unas 3 h con un cambio; llegada hacia mediodía'], sleep:'Brujas · Hotel du Théâtre'},
  {d:'2026-11-18', city:'Gante', c:'var(--bru)', title:'Excursión de un día a Gante', lines:['Tren de 25–30 min; maletas en Brujas y vuelta a dormir allí'], sleep:'Brujas · Hotel du Théâtre'},
@@ -390,7 +390,7 @@ function viewPlanes(){
   return `<div class="pad stack-l"><div class="stack" style="gap:4px"><h1 style="font-size:30px">Planes</h1><div class="muted">Lo que ya está fijado y lo que vayáis añadiendo. Lo que añade uno lo ve el otro.</div></div>
   <button class="btn ams" data-act="addplantop">${ic('plus')} Añadir plan</button>
   <div class="stack">${DAYS.map(x=>{ const dd=new Date(x.d+'T12:00:00'); const mine=S.planes.filter(p=>p.dia===x.d).sort((a,b)=>(a.hora||'99').localeCompare(b.hora||'99')); const lug=S.lugares.filter(l=>l.dia===x.d);
-    const fixed = x.d==='2026-11-15' ? ['Casa de Ana Frank: entradas compradas (hora por añadir)'] : (x.d==='2026-11-18'?['Gante en tren (25–30 min)']:[]);
+    const fixed = x.d==='2026-11-18'?['Gante en tren (25–30 min)']:[];
     return `<div class="daycard" style="--c:${x.c}"><div class="row" style="justify-content:space-between"><div class="small" style="font-weight:700;text-transform:uppercase;letter-spacing:.5px">${DIA[dd.getDay()]} ${dd.getDate()} ${MES[dd.getMonth()]} · ${x.city}</div><button class="iconbtn" style="width:44px;height:44px" data-act="addchoose" data-d="${x.d}" aria-label="Añadir">${ic('plus')}</button></div>
     ${fixed.map(f=>`<div style="font-size:15px;font-weight:600">${esc(f)}</div>`).join('')}
     ${mine.map(p=>`<button class="check" data-act="editplan" data-id="${p.id}" style="align-items:center"><span class="stack" style="gap:0;flex:1"><span style="font-size:15px;font-weight:600">${p.hora?esc(p.hora)+' · ':''}${esc(p.texto)}</span>${(()=>{const dc=p.archivoId&&S.archivos.find(a=>a.id===p.archivoId); return dc?`<span data-act="opendoc" data-id="${dc.id}" style="align-self:flex-start;margin-top:6px;display:inline-flex;gap:6px;align-items:center;padding:6px 12px;border-radius:999px;background:var(--fly-soft);color:var(--fly-ink);font-size:13px;font-weight:700">${ic('file',16)} Ver entrada</span>`:''})()}</span><span class="muted small">Editar</span></button>`).join('')}
