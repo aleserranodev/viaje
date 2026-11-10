@@ -256,12 +256,12 @@ const HOTELES = [
  {id:'bxl', city:'Bruselas', c:'var(--bxl)', soft:'var(--bxl-soft)', ink:'var(--bxl-ink)', name:'', addr:'', q:'', fechas:'19 – 21 nov · 2 noches', notes:[], pend:[], img:'bruselas', editable:true}
 ];
 const DESC = {
- 'Greenwoods Singel':'Clásico desde 1988: desayuno inglés, eggs Benedict y opciones vegetarianas, con terraza sobre el canal. Espera de unos 20 min, mejor ir temprano.',
- 'Chun Café (local de Spuistraat)':'Sándwiches coreanos de brioche (bulgogi y langostinos) y matcha. Famosísimo en TikTok: id al local de Spuistraat, donde hay menos cola que en Berenstraat.',
+ 'Greenwoods Singel':'Clásico desde 1988: desayuno inglés, eggs Benedict y opciones vegetarianas, con terraza sobre el canal.',
+ 'Chun Café (local de Spuistraat)':'Sándwiches coreanos de brioche (bulgogi y langostinos) y matcha. Famosísimo en TikTok: id al local de Spuistraat.',
  'The Pancake Bakery':'Pancakes holandeses, dulces y salados, en una casa del canal Prinsengracht. Solo se reserva para grupos de 6 o más personas.',
- 'Winkel 43':'El templo de la appeltaart holandesa con nata, además de desayunos salados. Lunes y sábado hay mercado en la plaza y la cola crece.'
+ 'Winkel 43':'El templo de la appeltaart holandesa con nata, además de desayunos salados. Lunes y sábado hay mercado en la plaza.'
 };
-const BADGE = {'Greenwoods Singel':'Clásico','The Pancake Bakery':'Pancakes','Winkel 43':'Tarta de manzana'};
+const BADGE = {'Greenwoods Singel':'Clásico','The Pancake Bakery':'Pancakes','Omelegg (centro)':'Omelettes','Winkel 43':'Tarta de manzana','Belly Pepper':'Brunch','Little Collins':'Estilo australiano','Florentin':'Estilo israelí','Bakers & Roasters':'Brunch brasileño','Miri Mary':'Brunch de fin de semana','Fort Negen':'El más barato'};
 const FOTOS = {'Greenwoods Singel':'greenwoods','Chun Café (local de Spuistraat)':'chun','The Pancake Bakery':'pancake-bakery','Omelegg (centro)':'omelegg','Winkel 43':'winkel43','Belly Pepper':'belly-pepper','Little Collins':'little-collins','Florentin':'florentin','Bakers & Roasters':'bakers-roasters','Miri Mary':'miri-mary','Fort Negen':'fort-negen'};
 
 /* ====================== vistas ====================== */
@@ -335,7 +335,7 @@ function viewComer(){
         <div class="card-p stack" style="gap:10px">
           <div><h2 style="font-size:22px;line-height:28px">${p.orden}. ${esc(p.nombre)}</h2>
             <div class="row small muted" style="gap:6px;align-items:flex-start;margin-top:2px"><span style="margin-top:1px">${ic('pin',16)}</span><span>${esc(p.direccion)}</span></div></div>
-          <div class="wrap"><span class="chip walk">${ic('walk',14,2)}${walk}</span><span class="chip price">${esc(p.precio)}</span><span class="chip">${esc(p.horario)}</span>${p.reserva?`<span class="chip">${esc(p.reserva)}</span>`:''}</div>
+          <div class="wrap"><span class="chip walk">${ic('walk',14,2)}${walk}</span><span class="chip price">${esc(p.precio)}</span><span class="chip">${esc(p.horario)}</span>${p.reserva&&!/cola|^no\b|^sin reserva/i.test(p.reserva)?`<span class="chip">${esc(p.reserva)}</span>`:''}</div>
           ${DESC[p.nombre]?`<p style="margin:0;font-size:14px;line-height:21px;color:#3D352C">${esc(DESC[p.nombre])}</p>`:''}
           <div class="row" style="gap:8px">
             <a class="btn ams" href="${p.maps}" target="_blank" rel="noopener" style="flex:1">Abrir en Google Maps ${ic('out',18,2)}</a>
@@ -354,7 +354,7 @@ function viewComer(){
     <div style="padding:0 20px"><div class="small muted" style="font-weight:600">Viaje noviembre 2026</div><h1 style="font-size:30px">Comer</h1></div>
     <div class="pills">${cities.map(c=>`<button class="pill ${S.city===c?'on':''}" style="--c:${CITYC[c]}" data-act="city" data-v="${c}">${c==='Ámsterdam'?'':`<span class="dot" style="background:${CITYC[c]}"></span>`}${c}</button>`).join('')}</div>
     <div style="padding:0 20px"><div class="seg">${meals.map(m=>`<button class="${S.meal===m?'on':''}" data-act="meal" data-v="${m}">${m}</button>`).join('')}</div></div>
-    <div class="stack" style="padding:0 20px"><button class="btn ams" data-act="addlugar">${ic('plus')} Añadir sitio en ${S.city} (${S.meal.toLowerCase()})</button><button class="btn ghost" data-act="openmap">${ic('pin',20)} Ver mapa de los sitios guardados en ${S.city}</button>${body}</div></div>`;
+    <div class="stack" style="padding:0 20px"><button class="btn ams" data-act="addlugar">${ic('plus')} Añadir sitio en ${S.city} (${S.meal.toLowerCase()})</button>${body}</div></div>`;
 }
 function lugarCard(l){
   const key='u-'+l.id; const prob=!!S.marcas['probado:'+key], fav=!!S.marcas['fav:'+key];
@@ -395,89 +395,6 @@ function viewMas(){
     <div class="row" style="gap:8px"><button class="btn ghost sm" data-act="chyo" style="flex:1">Cambiar quién soy</button><button class="btn ghost sm" data-act="chcode" style="flex:1">${ic('key',18)} Cambiar código</button></div></div></div>`;
 }
 
-/* ===== Mapa de sitios guardados (Leaflet + OpenStreetMap) ===== */
-const MEALC={Desayuno:'#F26A21',Comida:'#2E8B57',Cena:'#7B4FC9'};
-function geoCache(){ try{ return JSON.parse(store.get('viaje.geo')||'{}'); }catch(e){ return {}; } }
-function geoSave(c){ store.set('viaje.geo',JSON.stringify(c)); }
-const sleep = ms => new Promise(r=>setTimeout(r,ms));
-async function nominatim(q){
-  const r=await fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=nl,be&accept-language=es&q='+encodeURIComponent(q));
-  if(!r.ok) throw new Error('geo'); const j=await r.json();
-  return j[0]?{lat:+j[0].lat,lng:+j[0].lon}:null;
-}
-function coordsFromUrl(u){ const m=String(u||'').match(/@(-?\d+\.\d+),(-?\d+\.\d+)/)||String(u||'').match(/query=(-?\d+\.\d+)(?:,|%2C)(-?\d+\.\d+)/); return m?{lat:+m[1],lng:+m[2]}:null; }
-async function geocode(item){
-  const direct=coordsFromUrl(item.maps); if(direct) return {...direct,approx:false};
-  const cache=geoCache(); const addr=String(item.dir||'').replace(/\(.*?\)/g,'').trim();
-  const key=[addr||item.nombre,item.city].join('|').toLowerCase();
-  if(cache[key]) return cache[key];
-  const tries=[]; if(addr) tries.push([addr+', '+item.city,!/\d/.test(addr)]); tries.push([item.nombre+', '+item.city,true]);
-  for(let i=0;i<tries.length;i++){
-    await sleep(1100);
-    const g=await nominatim(tries[i][0]);
-    if(g){ const v={...g,approx:tries[i][1]}; cache[key]=v; geoSave(cache); return v; }
-  }
-  cache[key]={none:true}; geoSave(cache); return cache[key];
-}
-function hotelDeCiudad(city){
-  if(city==='Ámsterdam') return {nombre:'The Red Ox (hotel)',dir:'Singel 89',city:'Amsterdam'};
-  if(city==='Brujas') return {nombre:'Hostel 28 (alojamiento)',dir:'Dweerstraat 28',city:'Brugge'};
-  if(city==='Bruselas'){ const h=S.config.hotel_bruselas; return h&&(h.nombre||h.direccion)?{nombre:(h.nombre||'Hotel')+' (hotel)',dir:h.direccion||'',city:'Bruxelles'}:null; }
-  return null;
-}
-function lugaresMapa(city){
-  const cn={'Ámsterdam':'Amsterdam','Brujas':'Brugge','Gante':'Gent','Bruselas':'Bruxelles'}[city];
-  const out=[];
-  if(city==='Ámsterdam') DATA.desayunos_amsterdam.forEach(p=>out.push({n:p.orden,nombre:p.nombre,dir:p.direccion,city:cn,maps:p.maps,comida:'Desayuno'}));
-  S.lugares.filter(l=>l.ciudad===city).sort((a,b)=>(a.creado||0)-(b.creado||0)).forEach(l=>out.push({nombre:l.nombre,dir:l.direccion,city:cn,maps:l.maps,comida:l.comida||'Comida'}));
-  out.forEach((o,i)=>o.n=i+1);
-  return out;
-}
-let _leaf=null;
-function loadLeaflet(){
-  if(window.L) return Promise.resolve();
-  if(_leaf) return _leaf;
-  _leaf=new Promise((ok,ko)=>{
-    const l=document.createElement('link'); l.rel='stylesheet'; l.href='https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css'; document.head.appendChild(l);
-    const sc=document.createElement('script'); sc.src='https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js'; sc.onload=ok; sc.onerror=()=>{_leaf=null;ko(new Error('leaflet'));}; document.head.appendChild(sc);
-  });
-  return _leaf;
-}
-async function openMapa(){
-  const city=S.city; const items=lugaresMapa(city); const hotel=hotelDeCiudad(city);
-  let ov=document.getElementById('mapov'); if(ov) ov.remove();
-  ov=document.createElement('div'); ov.id='mapov';
-  ov.style.cssText='position:fixed;inset:0;z-index:90;background:var(--bg,#FBF6EE);display:flex;flex-direction:column';
-  ov.innerHTML=`<div class="row" style="padding:calc(10px + env(safe-area-inset-top)) 12px 10px;gap:8px"><button class="iconbtn" id="mp-x" aria-label="Cerrar">${ic('back')}</button><div style="font-weight:700;font-size:18px">Mapa · ${esc(city)}</div></div>
-  <div id="mp-map" style="flex:1;min-height:200px;background:#E9E2D6"></div>
-  <div id="mp-list" class="stack" style="gap:6px;padding:10px 16px calc(12px + env(safe-area-inset-bottom));max-height:34vh;overflow:auto"></div>`;
-  document.body.appendChild(ov);
-  let map=null, closed=false; $('#mp-x').onclick=()=>{ closed=true; ov.remove(); };
-  const list=$('#mp-list'); list.innerHTML='<div class="small muted">Cargando mapa…</div>';
-  try{ await loadLeaflet(); }catch(e){ list.innerHTML='<div class="small muted">El mapa necesita conexión a internet. Prueba cuando tengas datos o wifi.</div>'; return; }
-  if(closed) return;
-  const defaults={'Ámsterdam':[52.3702,4.8952],'Brujas':[51.2093,3.2247],'Gante':[51.0543,3.7174],'Bruselas':[50.8503,4.3517]};
-  map=L.map('mp-map',{zoomControl:true}).setView(defaults[city],14);
-  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(map);
-  const all=[...(hotel?[{...hotel,n:'H',comida:'Hotel',isHotel:true}]:[]),...items];
-  const rows={}; const pts=[];
-  const render=()=>{ list.innerHTML=all.length?all.map(o=>`<div class="row" style="gap:10px;align-items:center"><span style="min-width:26px;height:26px;border-radius:13px;background:${o.isHotel?'#1F1B16':MEALC[o.comida]};color:#fff;font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:center">${o.n}</span><div style="flex:1;min-width:0"><div style="font-weight:600;font-size:14px">${esc(o.nombre)}</div><div class="small muted">${o.state==='none'?'No he podido situarlo: añade el enlace de Maps al editarlo':(o.state==='approx'?'Posición aproximada (calle) · ':'')+esc(o.comida)}</div></div></div>`).join('')+'<div class="small muted" style="padding-top:4px">Naranja: desayuno · Verde: comida · Morado: cena</div>':'<div class="small muted">Aún no hay sitios guardados en esta ciudad.</div>'; };
-  all.forEach(o=>{o.state='load';}); render();
-  if(!all.length) return;
-  for(const o of all){
-    if(closed) return;
-    let g=null; try{ g=await geocode(o); }catch(e){ g=null; }
-    if(closed) return;
-    if(!g||g.none){ o.state='none'; render(); continue; }
-    o.state=g.approx?'approx':'ok'; pts.push([g.lat,g.lng]);
-    const col=o.isHotel?'#1F1B16':MEALC[o.comida];
-    const icon=L.divIcon({className:'',html:`<div style="width:30px;height:30px;border-radius:15px;background:${col};color:#fff;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;font:700 13px system-ui">${o.n}</div>`,iconSize:[30,30],iconAnchor:[15,15]});
-    const q=[o.nombre.replace(/\s*\(.*?\)/g,''),o.dir,o.city].filter(Boolean).join(' ');
-    L.marker([g.lat,g.lng],{icon}).addTo(map).bindPopup(`<b>${esc(o.nombre)}</b><br>${esc(o.dir||'')}<br><a href="${esc(o.maps&&!o.maps.includes('api=1&query=')?o.maps:mapsUrl(q))}" target="_blank" rel="noopener">Abrir en Google Maps</a>`);
-    map.invalidateSize(); if(pts.length===1) map.setView(pts[0],15); else map.fitBounds(pts,{padding:[40,40],maxZoom:16});
-    render();
-  }
-}
 function backBar(title){ return `<div class="row" style="padding:12px 12px 0"><button class="iconbtn" data-act="back" aria-label="Volver">${ic('back')}</button><span class="small muted" style="font-weight:600">Más</span></div><div style="padding:8px 20px 0"><h1 style="font-size:30px">${title}</h1></div>`; }
 function viewHoteles(){
   return backBar('Hoteles') + `<div class="pad stack">${HOTELES.map(h=>{
@@ -732,7 +649,6 @@ document.addEventListener('click', async e=>{
   else if(a==='addplantop') sheetPlan('');
   else if(a==='editgasto'){ const g=S.gastos.find(x=>x.id===el.dataset.id); if(g) sheetGasto(g); }
   else if(a==='addchoose') sheetChoose(el.dataset.d);
-  else if(a==='openmap') openMapa();
   else if(a==='addlugar') sheetLugar(null,{});
   else if(a==='editlugar'){ const l=S.lugares.find(x=>x.id===el.dataset.id); if(l) sheetLugar(l); }
   else if(a==='editplan'){ const p=S.planes.find(x=>x.id===el.dataset.id); if(p) sheetPlan(p.dia,p); }
