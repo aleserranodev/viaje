@@ -39,6 +39,10 @@ h1,h2,h3{margin:0;font-family:'Space Grotesk','Inter',sans-serif;letter-spacing:
 .small{font-size:13px;line-height:18px}
 .card{background:var(--card);border:1px solid var(--line);border-radius:20px;overflow:hidden}
 .card-p{padding:16px}
+.fgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:4px}
+.fph{position:relative;aspect-ratio:1;border:0;padding:0;border-radius:10px;overflow:hidden;background:var(--soft);cursor:pointer}
+.fph img{width:100%;height:100%;object-fit:cover;display:block}
+.fcap{position:absolute;left:4px;bottom:4px;background:rgba(0,0,0,.55);color:#fff;font-size:10px;padding:1px 6px;border-radius:8px}
 .chip{display:inline-flex;align-items:center;gap:6px;background:var(--soft);color:#3D352C;font-size:13px;line-height:18px;font-weight:500;padding:5px 10px;border-radius:14px}
 .chip.price{background:var(--ams-soft);color:var(--ams-ink);font-weight:600}
 .chip.walk{background:#fff;border:1.5px solid var(--ink);color:var(--ink);font-weight:600;padding:3.5px 8.5px}
@@ -183,6 +187,7 @@ const IC = {
   trash:'<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>',
   file:'<path d="M7 3h7l5 5v11a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zM14 3v5h5"/>',
   x:'<path d="M6 6l12 12M18 6L6 18"/>',
+  camera:'<path d="M4 8h3l1.5-2h7L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="3.5"/>',
   key:'<circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M16 7l3 3"/>'
 };
 const ic = (n,s=22,sw=1.8) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${IC[n]}</svg>`;
@@ -195,7 +200,7 @@ const S = {
   yo: normP(store.get('viaje.yo')) || 'Alejandro',
   lugares:[], gTab:'lista',
   gastos: DATA.gastos.lineas.map((l,i)=>({id:'g'+(i+1), fecha:l[0], concepto:l[1], total:Math.round(l[2]*100), pagador:'Cristina', local:true, orden:i})),
-  marcas:{}, planes:[], archivos:[], config:{},
+  marcas:{}, planes:[], archivos:[], fotos:[], fday:'', fcity:'', config:{},
   online:false, dbReady:false
 };
 const CITYC = {'Ámsterdam':'var(--ams)','Brujas':'var(--bru)','Gante':'var(--bru)','Bruselas':'var(--bxl)'};
@@ -231,6 +236,7 @@ function listen(){
   F.onSnapshot(colRef('marcas'), snap=>{ const m={}; snap.forEach(d=>m[d.id]=d.data().v===true); S.marcas=m; render(['comer','inicio','planes','ruta','hoteles']); }, err);
   F.onSnapshot(colRef('planes'), snap=>{ const a=[]; snap.forEach(d=>a.push({id:d.id,...d.data()})); S.planes=a; render(['planes']); }, err);
   F.onSnapshot(colRef('archivos'), snap=>{ const a=[]; snap.forEach(d=>a.push({id:d.id,...d.data()})); S.archivos=a; render(['docs']); }, err);
+  F.onSnapshot(colRef('fotos'), snap=>{ const a=[]; snap.forEach(d=>a.push({id:d.id,...d.data()})); S.fotos=a; render(['fotos']); }, err);
   F.onSnapshot(colRef('lugares'), snap=>{ const a=[]; snap.forEach(d=>a.push({id:d.id,...d.data()})); S.lugares=a; render(['comer','planes']); }, err);
   F.onSnapshot(colRef('config'), snap=>{ const c={}; snap.forEach(d=>c[d.id]=d.data()); S.config=c; render(['hoteles','inicio']); }, err);
 }
@@ -463,6 +469,7 @@ function viewMas(){
   return `<div class="pad stack-l"><h1 style="font-size:30px">Más</h1><div class="stack">
     ${row('hoteles','bed','Hoteles','Dirección, fechas y notas de cada alojamiento','var(--ams-ink)','var(--ams-soft)')}
     ${row('docs','doc','Documentos','Billetes, entradas y reservas','var(--fly-ink)','var(--fly-soft)')}
+    ${row('fotos','camera','Fotos','Las fotos del viaje, por día y ciudad','var(--bxl-ink)','var(--bxl-soft)')}
     ${row('ruta','route','Ruta','Día a día, del viernes 13 al sábado 21','var(--ams-ink)','var(--ams-soft)')}
     <div class="stack"><div class="small muted">Eres <b>${esc(S.yo)}</b> en este móvil.</div>
     <div class="row" style="gap:8px"><button class="btn ghost sm" data-act="chyo" style="flex:1">Cambiar quién soy</button><button class="btn ghost sm" data-act="chcode" style="flex:1">${ic('key',18)} Cambiar código</button></div></div></div>`;
@@ -537,7 +544,7 @@ function currentName(){ return S.sub || S.tab; }
 function render(only){
   if(!S.code){ renderGate(); return; }
   if(only && !only.includes(currentName())) { renderTabs(); return; }
-  const v={inicio:viewInicio,ruta:()=>(S.sub==='ruta'?backRow():'')+viewRuta(),comer:viewComer,planes:viewPlanes,mas:viewMas,hoteles:viewHoteles,docs:viewDocs,gastos:viewGastos}[currentName()];
+  const v={inicio:viewInicio,ruta:()=>(S.sub==='ruta'?backRow():'')+viewRuta(),comer:viewComer,planes:viewPlanes,mas:viewMas,hoteles:viewHoteles,docs:viewDocs,fotos:viewFotos,gastos:viewGastos}[currentName()];
   const y=window.scrollY; $('#view').innerHTML=v(); if(currentName()==='comer') applyCq(); if(currentName()==='planes'){ const o=document.querySelector('.dtile.on'); if(o&&o.parentNode) o.parentNode.scrollLeft=o.offsetLeft-o.parentNode.clientWidth/2+o.offsetWidth/2; } renderTabs(); if(only) window.scrollTo(0,y);
 }
 function renderTabs(){
@@ -663,6 +670,63 @@ function sheetHotel(){
   $('#h-ok').onclick=async()=>{ const ok=await dbDo(()=>F.setDoc(docRef('config','hotel_bruselas'),{nombre:$('#h-n').value.trim(),direccion:$('#h-d').value.trim()})); if(ok) closeSheet(); };
 }
 const MAXB=650*1024;
+
+/* ====================== fotos ====================== */
+const FCITIES=['Ámsterdam','Brujas','Gante','Bruselas'];
+function cityOfDay(d){ const x=DAYS.find(z=>z.d===d); return x&&FCITIES.includes(x.city)?x.city:''; }
+function viewFotos(){
+  const all=S.fotos.slice().sort((a,b)=>(b.creado||0)-(a.creado||0));
+  const days=[...new Set(all.map(f=>f.dia))].sort();
+  const list=all.filter(f=>(!S.fcity||f.ciudad===S.fcity)&&(!S.fday||f.dia===S.fday));
+  const chip=(act,v,cur,label)=>`<button class="chip" data-act="${act}" data-v="${v}" style="cursor:pointer;border:1.5px solid ${cur===v?'var(--ink)':'transparent'};${cur===v?'font-weight:700;background:#fff':''}">${label}</button>`;
+  return backBar('Fotos')+`<div class="pad stack-l">
+  <div class="row" style="gap:8px"><button class="btn fly" data-act="addfoto" style="flex:1">${ic('camera')} Hacer foto</button><button class="btn ghost" data-act="addfoto" data-g="1" style="flex:1">${ic('plus')} Galería</button></div>
+  <div class="stack" style="gap:8px"><div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:2px">${chip('fcity','',S.fcity,'Todas')}${FCITIES.map(c=>chip('fcity',c,S.fcity,c)).join('')}</div>
+  ${days.length?`<div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:2px">${chip('fday','',S.fday,'Todos los días')}${days.map(d=>chip('fday',d,S.fday,esc(fmtFecha(d)))).join('')}</div>`:''}</div>
+  ${list.length?`<div class="fgrid">${list.map(f=>`<button class="fph" data-act="openfoto" data-id="${f.id}"><img src="${f.thumb}" alt="" loading="lazy"><span class="fcap">${esc(f.autor||'')}</span></button>`).join('')}</div><div class="small muted" style="text-align:center">${list.length} foto${list.length===1?'':'s'}</div>`
+   :`<div class="empty">${all.length?'No hay fotos con este filtro.':'Aún no hay fotos. Haz la primera.'}</div>`}</div>`;
+}
+function sheetAddFoto(files){
+  const t=todayStr(); const dia0=DAYS.some(d=>d.d===t)?t:(S.fday||DAYS[0].d);
+  openSheet(`${sheetHead('Subir '+files.length+' foto'+(files.length===1?'':'s'))}
+   <label class="f">Día<select class="in" id="f-d">${DAYS.map(d=>`<option value="${d.d}" ${d.d===dia0?'selected':''}>${esc(fmtFecha(d.d))} · ${esc(d.city)}</option>`).join('')}</select></label>
+   <label class="f">Ciudad<select class="in" id="f-c">${FCITIES.map(c=>`<option ${c===(cityOfDay(dia0)||S.fcity||'Ámsterdam')?'selected':''}>${c}</option>`).join('')}</select></label>
+   <div class="small muted" id="f-m"></div>
+   <button class="btn fly" id="f-ok">Subir</button>`);
+  $('#f-d').onchange=()=>{ const c=cityOfDay($('#f-d').value); if(c) $('#f-c').value=c; };
+  $('#f-ok').onclick=async()=>{
+    const dia=$('#f-d').value, ciudad=$('#f-c').value; const btn=$('#f-ok'); btn.disabled=true; let n=0, fail=0;
+    for(const file of files){
+      $('#f-m').textContent=`Subiendo ${n+fail+1} de ${files.length}…`;
+      try{
+        const full=await shrinkImage(file,300*1024,1280), th=await shrinkImage(file,40*1024,360);
+        const [data,thumb]=await Promise.all([toDataURL(full),toDataURL(th)]);
+        const ok=await dbDo(async()=>{ const ref=await F.addDoc(colRef('fotos'),{dia,ciudad,autor:S.yo,creado:Date.now()+n,thumb}); await F.setDoc(docRef('blobs','f-'+ref.id),{data}); });
+        ok?n++:fail++;
+      }catch(e){ console.error(e); fail++; }
+    }
+    if(fail){ btn.disabled=false; $('#f-m').textContent=''; toast(`${n} subida${n===1?'':'s'}, ${fail} con error.`); if(!n) return; }
+    S.fday=''; S.fcity=''; closeSheet(); if(!fail) toast(n+' foto'+(n===1?'':'s')+' subida'+(n===1?'':'s')+' ✓'); render(['fotos']);
+  };
+}
+async function sheetOpenFoto(id){
+  const f=S.fotos.find(x=>x.id===id); if(!f) return;
+  openSheet(`${sheetHead(esc(fmtFecha(f.dia))+' · '+esc(f.ciudad||''))}<div class="small muted">Subida por ${esc(f.autor||'')} · ${esc(new Date(f.creado||0).toLocaleString('es-ES',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}))}</div>
+   <div id="f-body"><img src="${f.thumb}" alt="" style="width:100%;border-radius:14px;filter:blur(2px)"></div><div id="f-act" class="stack"></div>`);
+  try{
+    const sn=await F.getDoc(docRef('blobs','f-'+id)); if(!sn.exists()) throw 0;
+    const data=sn.data().data; const url=URL.createObjectURL(await (await fetch(data)).blob());
+    if(!$('#f-body')) return;
+    $('#f-body').innerHTML=`<img src="${url}" alt="" style="width:100%;border-radius:14px;border:1px solid var(--line)">`;
+    $('#f-act').innerHTML=`<a class="btn fly" href="${url}" download="viaje-${esc(f.dia)}-${id.slice(0,5)}.jpg">Descargar</a><button class="btn danger" id="f-del">Borrar foto</button>`;
+    $('#f-del').onclick=async()=>{ if(!confirm('¿Borrar esta foto para los dos?')) return; const ok=await dbDo(async()=>{ await F.deleteDoc(docRef('fotos',id)); await F.deleteDoc(docRef('blobs','f-'+id)); }); if(ok) closeSheet(); };
+  }catch(e){ if($('#f-body')) $('#f-body').innerHTML='<div class="empty">No se pudo cargar la foto. ¿Hay conexión?</div>'; }
+}
+function pickFotos(gallery){
+  const i=document.createElement('input'); i.type='file'; i.accept='image/*'; if(gallery) i.multiple=true; else i.setAttribute('capture','environment');
+  i.onchange=()=>{ const fs=[...i.files].filter(f=>f.type.startsWith('image/')); if(fs.length) sheetAddFoto(fs); };
+  i.click();
+}
 function sheetDoc(){
   openSheet(`${sheetHead('Añadir documento')}
    <label class="f">Título<input class="in" id="d-t" placeholder="Vuelo ida Sevilla → Ámsterdam"></label>
@@ -739,6 +803,10 @@ document.addEventListener('click', async e=>{
   else if(a==='editplan'){ const p=S.planes.find(x=>x.id===el.dataset.id); if(p) sheetPlan(p.dia,p); }
   else if(a==='edithotel') sheetHotel();
   else if(a==='adddoc') sheetDoc();
+  else if(a==='addfoto') pickFotos(!!el.dataset.g);
+  else if(a==='openfoto') sheetOpenFoto(el.dataset.id);
+  else if(a==='fcity'){ S.fcity=el.dataset.v; render(['fotos']); }
+  else if(a==='fday'){ S.fday=el.dataset.v; render(['fotos']); }
   else if(a==='opendoc') sheetOpenDoc(el.dataset.id);
   else if(a==='chyo'){ S.yo=S.yo==='Alejandro'?'Cristina':'Alejandro'; store.set('viaje.yo',S.yo); render(); toast('Ahora eres '+S.yo+'.'); }
   else if(a==='chcode'){ if(confirm('¿Cambiar el código del viaje en este móvil?')){ store.del('viaje.code'); S.code=''; location.reload(); } }
