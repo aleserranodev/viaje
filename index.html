@@ -456,7 +456,7 @@ function viewPlanes(){
   const cityQ=sel.city==='Vuelos'?'':sel.city;
   const KNOWN=[[/ana frank/i,'Casa de Ana Frank, Prinsengracht 263-267, Amsterdam'],[/parlamento europeo/i,'Parlamento Europeo, Rue Wiertz 60, Bruxelles']];
   const stops=rows.map(r=>{ if(r.kind==='lug') return r.l.nombre+', '+(r.l.ciudad||cityQ);
-    const p=r.p; if(p.lugar) return p.lugar+(cityQ?', '+cityQ:''); const k=KNOWN.find(x=>x[0].test(p.texto||'')); if(k) return k[1];
+    const p=r.p; if(p.lugar) return /^-?\d+\.\d+,-?\d+\.\d+$/.test(p.lugar)?p.lugar:p.lugar+(cityQ?', '+cityQ:''); const k=KNOWN.find(x=>x[0].test(p.texto||'')); if(k) return k[1];
     const t=String(p.texto||''); if(t.length>45) return ''; const q=t.replace(/^(comer|cenar|desayunar|almorzar)( en)?\s+/i,'').trim(); return q?q+(cityQ?', '+cityQ:''):''; }).filter(x=>x.length>2).slice(0,8);
   const isFly=sel.city==='Vuelos', first=sel.d===DAYS[0].d;
   const hot=isFly?HOTELES.find(h=>h.id===(first?'ams':'bxl')):HOTELES.find(h=>sel.sleep&&sel.sleep.startsWith(h.city)); const hq=hot?hot.q:'';
