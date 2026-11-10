@@ -350,8 +350,8 @@ function viewComer(){
           ${DESC[p.nombre]?`<p style="margin:0;font-size:14px;line-height:21px;color:#3D352C">${esc(DESC[p.nombre])}</p>`:''}
           <div class="row" style="gap:8px">
             <a class="btn ams" href="${p.maps}" target="_blank" rel="noopener" style="flex:1">Abrir en Google Maps ${ic('out',18,2)}</a>
-            <button class="iconbtn ${fav?'on':''}" data-act="mark" data-k="fav:${key}" aria-label="Favorito" aria-pressed="${fav}">${ic('heart')}</button>
-            <button class="iconbtn ${prob?'ok':''}" data-act="mark" data-k="probado:${key}" aria-label="Probado" aria-pressed="${prob}">${ic('check',22,2.4)}</button>
+            <button class="iconbtn" data-act="plusrest" data-n="${esc(p.nombre)}" data-c="Ámsterdam" aria-label="Añadir a un plan" style="width:48px;height:48px">${ic('plus')}</button>
+            
           </div>
           ${(fav||prob)?`<div class="small muted">${prob?'Probado ':''}${fav&&prob?'· ':''}${fav?'Favorito':''}</div>`:''}
         </div></div>`;
@@ -383,8 +383,8 @@ function lugarCard(l){
       ${l.desc?`<p style="margin:0;font-size:14px;line-height:21px;color:#3D352C">${esc(l.desc)}</p>`:''}
       <div class="row" style="gap:8px">
         <a class="btn ams" href="${esc(maps)}" target="_blank" rel="noopener" style="flex:1">Abrir en Google Maps ${ic('out',18,2)}</a>
-        <button class="iconbtn ${fav?'on':''}" data-act="mark" data-k="fav:${key}" aria-label="Favorito" aria-pressed="${fav}">${ic('heart')}</button>
-        <button class="iconbtn ${prob?'ok':''}" data-act="mark" data-k="probado:${key}" aria-label="Probado" aria-pressed="${prob}">${ic('check',22,2.4)}</button>
+        <button class="iconbtn" data-act="plusrest" data-n="${esc(l.nombre)}" data-c="${esc(l.ciudad||'')}" aria-label="Añadir a un plan" style="width:48px;height:48px">${ic('plus')}</button>
+        
       </div>
       <button class="btn ghost sm" data-act="editlugar" data-id="${l.id}" style="width:100%">Editar este sitio</button>
     </div></div>`;
@@ -530,10 +530,10 @@ function sheetGasto(g){
 }
 function parseImporte(s){ const n=Number(String(s).trim().replace(/\s/g,'').replace(/\.(?=\d{3}\b)/g,'').replace(',','.')); return (isFinite(n)&&n>0)?Math.round(n*100):0; }
 
-function sheetPlan(dia0,p){
+function sheetPlan(dia0,p,pre){ pre=pre||{};
   const dia=dia0; const arguments0={d:dia0};
-  const nuevo=!p; p=p||{hora:'',texto:''};
-  openSheet(`${sheetHead(nuevo?'Añadir plan':'Editar plan')}${dia?`<div class="small muted">${fmtFecha(dia)}</div>`:`<label class="f">Día<select class="in" id="p-dia">${DAYS.map(x=>{const dd=new Date(x.d+'T12:00:00'); const def=(todayStr()>=TRIP_START&&todayStr()<=TRIP_END)?todayStr():TRIP_START; return `<option value="${x.d}" ${x.d===def?'selected':''}>${DIAL[dd.getDay()]} ${dd.getDate()} ${MES[dd.getMonth()]} · ${x.city}</option>`}).join('')}</select></label>`}
+  const nuevo=!p; p=p||{hora:'',texto:pre.texto||''};
+  openSheet(`${sheetHead(nuevo?'Añadir plan':'Editar plan')}${dia?`<div class="small muted">${fmtFecha(dia)}</div>`:`<label class="f">Día<select class="in" id="p-dia">${DAYS.map(x=>{const dd=new Date(x.d+'T12:00:00'); const def=(pre.city&&(DAYS.find(z=>z.city===pre.city)||{}).d)||((todayStr()>=TRIP_START&&todayStr()<=TRIP_END)?todayStr():TRIP_START); return `<option value="${x.d}" ${x.d===def?'selected':''}>${DIAL[dd.getDay()]} ${dd.getDate()} ${MES[dd.getMonth()]} · ${x.city}</option>`}).join('')}</select></label>`}
    <label class="f">Hora (opcional)<input class="in" id="p-h" type="time" value="${esc(p.hora)}"></label>
    <label class="f">Plan<textarea class="in" id="p-t" placeholder="Qué vais a hacer, dónde, si hay que reservar…">${esc(p.texto)}</textarea></label>
    <label class="f">Documento ligado (opcional)<select class="in" id="p-a"><option value="">Ninguno</option>${S.archivos.map(a=>`<option value="${a.id}" ${a.id===p.archivoId?'selected':''}>${esc(a.titulo)}</option>`).join('')}</select></label>
@@ -666,6 +666,7 @@ document.addEventListener('click', async e=>{
   else if(a==='addplantop') sheetPlan('');
   else if(a==='editgasto'){ const g=S.gastos.find(x=>x.id===el.dataset.id); if(g) sheetGasto(g); }
   else if(a==='addchoose') sheetChoose(el.dataset.d);
+  else if(a==='plusrest') sheetPlan(null,null,{texto:'Comer en '+el.dataset.n,city:el.dataset.c});
   else if(a==='addlugar') sheetLugar(null,{});
   else if(a==='editlugar'){ const l=S.lugares.find(x=>x.id===el.dataset.id); if(l) sheetLugar(l); }
   else if(a==='editplan'){ const p=S.planes.find(x=>x.id===el.dataset.id); if(p) sheetPlan(p.dia,p); }
