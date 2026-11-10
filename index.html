@@ -78,6 +78,27 @@ h1,h2,h3{margin:0;font-family:'Space Grotesk','Inter',sans-serif;letter-spacing:
 .cityrow img{width:100%;height:100%;object-fit:cover;display:block}
 .tile{flex:1;border-radius:18px;padding:14px 12px;display:flex;flex-direction:column;gap:10px;border:0;text-align:left;cursor:pointer}
 .tile .o{width:40px;height:40px;border-radius:20px;background:#fff;color:var(--ink);display:flex;align-items:center;justify-content:center}
+
+.dstrip{display:flex;gap:8px;overflow-x:auto;padding:2px 20px 8px;scrollbar-width:none;scroll-snap-type:x proximity}
+.dstrip::-webkit-scrollbar{display:none}
+.dtile{position:relative;flex:none;width:62px;padding:8px 0 9px;border-radius:18px;border:1px solid #E3D6C6;background:#fff;display:flex;flex-direction:column;align-items:center;gap:1px;cursor:pointer;scroll-snap-align:center;font-family:inherit}
+.dtile .dw{font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:#6B5E50;font-weight:600}
+.dtile .dn{font-family:'Space Grotesk';font-size:24px;font-weight:700;line-height:28px;color:#1F1B16}
+.dtile .dc{font-size:11px;color:#6B5E50;max-width:58px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dtile.on{background:var(--c);border-color:var(--c);box-shadow:0 6px 14px -6px var(--c)}
+.dtile.on .dw,.dtile.on .dc,.dtile.on .dn{color:#fff}
+.dbadge{position:absolute;top:-6px;right:-4px;min-width:20px;height:20px;border-radius:10px;background:#1F1B16;color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0 5px}
+.dhero{border-radius:22px;padding:18px;color:#fff;background:linear-gradient(135deg,var(--c),color-mix(in srgb,var(--c) 70%,#000));display:flex;flex-direction:column;gap:6px}
+.tline{display:flex;flex-direction:column;position:relative}
+.trow{display:grid;grid-template-columns:48px 14px 1fr;gap:8px;align-items:stretch;position:relative}
+.trow .th{font-family:'Space Grotesk';font-weight:700;font-size:15px;padding-top:14px;text-align:right}
+.trow .tdot{position:relative}
+.trow .tdot::before{content:"";position:absolute;left:6px;top:0;bottom:0;width:2px;background:#E3D6C6}
+.trow .tdot::after{content:"";position:absolute;left:1px;top:18px;width:12px;height:12px;border-radius:6px;background:var(--ams);border:2px solid #fff;box-shadow:0 0 0 1px #E3D6C6}
+.trow:first-child .tdot::before{top:24px}.trow:last-child .tdot::before{bottom:calc(100% - 24px)}
+.tcard{display:flex;flex-direction:column;gap:4px;align-items:flex-start;text-align:left;margin:5px 0;padding:12px 14px;border-radius:16px;background:#fff;border:1px solid var(--line);font-family:inherit;cursor:pointer;width:100%}
+.tcard .tt{font-size:15px;font-weight:600;color:#1F1B16}
+.tdoc{display:inline-flex;gap:6px;align-items:center;padding:6px 12px;border-radius:999px;background:var(--fly-soft);color:var(--fly-ink);font-size:13px;font-weight:700;margin-top:4px}
 .check{display:flex;gap:10px;align-items:flex-start;cursor:pointer;background:none;border:0;text-align:left;padding:0;width:100%}
 .box{margin-top:2px;width:22px;height:22px;border-radius:7px;border:2px solid #B8741A;flex:none;display:flex;align-items:center;justify-content:center;color:#fff}
 .box.on{background:#B8741A}
@@ -390,15 +411,31 @@ function lugarCard(l){
     </div></div>`;
 }
 function viewPlanes(){
-  return `<div class="pad stack-l"><div class="stack" style="gap:4px"><h1 style="font-size:30px">Planes</h1><div class="muted">Lo que ya está fijado y lo que vayáis añadiendo. Lo que añade uno lo ve el otro.</div></div>
-  <button class="btn ams" data-act="addplantop">${ic('plus')} Añadir plan</button>
-  <div class="stack">${DAYS.map(x=>{ const dd=new Date(x.d+'T12:00:00'); const mine=S.planes.filter(p=>p.dia===x.d).sort((a,b)=>(a.hora||'99').localeCompare(b.hora||'99')); const lug=S.lugares.filter(l=>l.dia===x.d);
-    const fixed = x.d==='2026-11-18'?['Gante en tren (25–30 min)']:[];
-    return `<div class="daycard" style="--c:${x.c}"><div class="row" style="justify-content:space-between"><div class="small" style="font-weight:700;text-transform:uppercase;letter-spacing:.5px">${DIA[dd.getDay()]} ${dd.getDate()} ${MES[dd.getMonth()]} · ${x.city}</div><button class="iconbtn" style="width:44px;height:44px" data-act="addchoose" data-d="${x.d}" aria-label="Añadir">${ic('plus')}</button></div>
-    ${fixed.map(f=>`<div style="font-size:15px;font-weight:600">${esc(f)}</div>`).join('')}
-    ${mine.map(p=>`<button class="check" data-act="editplan" data-id="${p.id}" style="align-items:center"><span class="stack" style="gap:0;flex:1"><span style="font-size:15px;font-weight:600">${p.hora?esc(p.hora)+' · ':''}${esc(p.texto)}</span>${(()=>{const dc=p.archivoId&&S.archivos.find(a=>a.id===p.archivoId); return dc?`<span data-act="opendoc" data-id="${dc.id}" style="align-self:flex-start;margin-top:6px;display:inline-flex;gap:6px;align-items:center;padding:6px 12px;border-radius:999px;background:var(--fly-soft);color:var(--fly-ink);font-size:13px;font-weight:700">${ic('file',16)} Ver entrada</span>`:''})()}</span><span class="muted small">Editar</span></button>`).join('')}
-    ${lug.map(l=>`<button class="check" data-act="editlugar" data-id="${l.id}" style="align-items:center"><span style="color:var(--ams)">${ic('eat',20)}</span><span class="stack" style="gap:0;flex:1"><span style="font-size:15px;font-weight:600">${esc(l.nombre)}</span><span class="small muted">${esc(l.comida)} · ${esc(l.ciudad)}</span></span><span class="muted small">Editar</span></button>`).join('')}
-    ${!fixed.length&&!mine.length&&!lug.length?'<div class="small muted">Sin planes todavía</div>':''}</div>`; }).join('')}</div></div>`;
+  const t=todayStr(); const inTrip=t>=TRIP_START&&t<=TRIP_END;
+  const sel=(DAYS.find(x=>x.d===S.pd)||DAYS.find(x=>x.d===(inTrip?t:''))||DAYS[0]);
+  const itemsOf=x=>({plans:S.planes.filter(p=>p.dia===x.d),lug:S.lugares.filter(l=>l.dia===x.d)});
+  const strip=DAYS.map(x=>{ const dd=new Date(x.d+'T12:00:00'); const it=itemsOf(x); const n=it.plans.length+it.lug.length;
+    return `<button class="dtile ${x.d===sel.d?'on':''}" style="--c:${x.c}" data-act="pday" data-d="${x.d}" aria-pressed="${x.d===sel.d}"><span class="dw">${DIA[dd.getDay()]}</span><span class="dn">${dd.getDate()}</span><span class="dc">${x.city==='Vuelos'?'Vuelo':esc(x.city)}</span>${n?`<span class="dbadge">${n}</span>`:''}</button>`; }).join('');
+  const dd=new Date(sel.d+'T12:00:00'); const it=itemsOf(sel);
+  const rows=[];
+  it.plans.forEach(p=>rows.push({h:p.hora||'',kind:'plan',p}));
+  it.lug.forEach(l=>rows.push({h:'',kind:'lug',l}));
+  rows.sort((a,b)=>(a.h||'99').localeCompare(b.h||'99'));
+  const info=(sel.lines||[]).filter(l=>!/^Sin planes/i.test(l));
+  const row=r=>{
+    if(r.kind==='plan'){ const p=r.p; const dc=p.archivoId&&S.archivos.find(a=>a.id===p.archivoId);
+      return `<div class="trow"><div class="th">${p.hora?esc(p.hora):'<span class="muted">—</span>'}</div><div class="tdot"></div><button class="tcard" data-act="editplan" data-id="${p.id}"><span class="tt">${esc(p.texto)}</span>${dc?`<span data-act="opendoc" data-id="${dc.id}" class="tdoc">${ic('file',16)} Ver entrada</span>`:''}</button></div>`; }
+    const l=r.l; return `<div class="trow"><div class="th"><span class="muted">${ic('eat',18)}</span></div><div class="tdot"></div><button class="tcard" data-act="editlugar" data-id="${l.id}"><span class="tt">${esc(l.nombre)}</span><span class="small muted">${esc(l.comida)} · ${esc(l.ciudad)}</span></button></div>`; };
+  return `<div class="stack-l" style="padding-top:20px"><div class="stack" style="gap:4px;padding:0 20px"><h1 style="font-size:30px">Planes</h1><div class="muted">Elige un día para ver todo lo que hacéis. Lo que añade uno lo ve el otro.</div></div>
+  <div class="dstrip">${strip}</div>
+  <div style="padding:0 20px" class="stack">
+   <div class="dhero" style="--c:${sel.c}"><div class="small" style="font-weight:700;text-transform:uppercase;letter-spacing:.6px">${DIAL[dd.getDay()]} ${dd.getDate()} ${MES[dd.getMonth()]} · ${esc(sel.city)}</div>
+     <div style="font-family:'Space Grotesk';font-size:24px;line-height:30px;font-weight:700">${esc(sel.title)}</div>
+     ${sel.sleep?`<div class="row small" style="gap:6px">${ic('bed',16)} Dormís en ${esc(sel.sleep)}</div>`:''}
+     ${info.map(l=>`<div class="small" style="opacity:.85">${esc(l)}</div>`).join('')}</div>
+   <button class="btn ams" data-act="addchoose" data-d="${sel.d}">${ic('plus')} Añadir al día</button>
+   ${rows.length?`<div class="tline">${rows.map(row).join('')}</div>`:`<div class="empty"><div style="font-weight:700;color:var(--ink);margin-bottom:4px">Día libre</div>Nada fijado todavía. Añade un plan o un restaurante con el botón de arriba, o con el + desde la pestaña Comer.</div>`}
+  </div></div>`;
 }
 function viewMas(){
   const row=(sub,icn,title,sub2,c,soft)=>`<button class="listrow" data-act="sub" data-sub="${sub}"><span style="width:44px;height:44px;border-radius:22px;background:${soft};color:${c};display:flex;align-items:center;justify-content:center;flex:none">${ic(icn)}</span><span class="stack" style="gap:0;flex:1"><span style="font-weight:700;font-size:17px">${title}</span><span class="small muted">${sub2}</span></span>${ic('back',20).replace('M15 6l-6 6 6 6','M9 6l6 6-6 6')}</button>`;
@@ -479,7 +516,7 @@ function render(only){
   if(!S.code){ renderGate(); return; }
   if(only && !only.includes(currentName())) { renderTabs(); return; }
   const v={inicio:viewInicio,ruta:viewRuta,comer:viewComer,planes:viewPlanes,mas:viewMas,hoteles:viewHoteles,docs:viewDocs,gastos:viewGastos}[currentName()];
-  const y=window.scrollY; $('#view').innerHTML=v(); if(currentName()==='comer') applyCq(); renderTabs(); if(only) window.scrollTo(0,y);
+  const y=window.scrollY; $('#view').innerHTML=v(); if(currentName()==='comer') applyCq(); if(currentName()==='planes'){ const o=document.querySelector('.dtile.on'); if(o&&o.parentNode) o.parentNode.scrollLeft=o.offsetLeft-o.parentNode.clientWidth/2+o.offsetWidth/2; } renderTabs(); if(only) window.scrollTo(0,y);
 }
 function renderTabs(){
   if(!S.code){ $('#tabs').innerHTML=''; return; }
@@ -665,6 +702,7 @@ document.addEventListener('click', async e=>{
   else if(a==='gtab'){ S.gTab=el.dataset.v; render(); }
   else if(a==='addplantop') sheetPlan('');
   else if(a==='editgasto'){ const g=S.gastos.find(x=>x.id===el.dataset.id); if(g) sheetGasto(g); }
+  else if(a==='pday'){ S.pd=el.dataset.d; render(); }
   else if(a==='addchoose') sheetChoose(el.dataset.d);
   else if(a==='plusrest') sheetPlan(null,null,{texto:'Comer en '+el.dataset.n,city:el.dataset.c});
   else if(a==='addlugar') sheetLugar(null,{});
