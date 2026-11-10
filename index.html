@@ -392,7 +392,7 @@ function viewComer(){
   } else {
     body = `<div class="empty"><div style="font-weight:700;color:var(--ink);margin-bottom:4px">${S.meal} en ${S.city}</div>Aún no hay sitios aquí. Añade el primero con el botón de arriba.</div>`;
   }
-  const qs=[...(hasData?DATA.desayunos_amsterdam.map(p=>[p.nombre,p.direccion]):[]),...mine.map(l=>[l.nombre,l.direccion])].map(([n,d])=>[n,d&&!new RegExp(S.city,'i').test(d)?d:'',S.city].filter(Boolean).join(', '));
+  const qs=[...(hasData?DATA.desayunos_amsterdam.map(p=>[p.nombre,p.direccion]):[]),...mine.map(l=>[l.nombre,l.direccion])].map(([n,d])=>[(n||'').replace(/\([^)]*\)/g,'').trim(),(d||'').replace(/\([^)]*\)/g,'').trim()]).map(([n,d])=>[n,d&&!new RegExp(S.city,'i').test(d)?d:'',S.city].filter(Boolean).join(', '));
   let mapBtns='';
   if(qs.length){ const E=encodeURIComponent, CH=11; const parts=[]; for(let i=0;i<qs.length;i+=CH) parts.push(qs.slice(i,i+CH));
     const url=a=>a.length===1?'https://www.google.com/maps/search/?api=1&query='+E(a[0]):'https://www.google.com/maps/dir/?api=1&travelmode=walking&origin='+E(a[0])+'&destination='+E(a[a.length-1])+(a.length>2?'&waypoints='+E(a.slice(1,-1).join('|')):'');
