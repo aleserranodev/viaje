@@ -92,7 +92,18 @@ h1,h2,h3{margin:0;font-family:'Space Grotesk','Inter',sans-serif;letter-spacing:
 .dtile.on{background:var(--c);border-color:var(--c);box-shadow:0 6px 14px -6px var(--c)}
 .dtile.on .dw,.dtile.on .dc,.dtile.on .dn{color:#fff}
 .dbadge{position:absolute;top:-6px;right:-4px;min-width:20px;height:20px;border-radius:10px;background:#1F1B16;color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0 5px}
-.dhero{border-radius:22px;padding:18px;color:#fff;background:linear-gradient(135deg,var(--c),color-mix(in srgb,var(--c) 70%,#000));display:flex;flex-direction:column;gap:6px}
+.wxfx{position:absolute;inset:0;pointer-events:none;opacity:.55}
+.wxfx.rain{background-image:repeating-linear-gradient(105deg,transparent 0 9px,rgba(255,255,255,.55) 9px 10px);background-size:40px 60px;animation:wxr .6s linear infinite}
+@keyframes wxr{to{background-position:-12px 60px}}
+.wxfx.snow{background-image:radial-gradient(circle,#fff 2px,transparent 3px),radial-gradient(circle,#fff 1.5px,transparent 2.5px);background-size:46px 50px,31px 37px;animation:wxs 4s linear infinite}
+@keyframes wxs{to{background-position:10px 100px,-8px 74px}}
+.wxfx.cloud{background:radial-gradient(60px 28px at 20% 25%,rgba(255,255,255,.5),transparent 70%),radial-gradient(80px 32px at 75% 60%,rgba(255,255,255,.4),transparent 70%);background-size:200% 100%;animation:wxc 18s linear infinite alternate}
+@keyframes wxc{to{background-position:60% 0}}
+.wxfx.sun{background:radial-gradient(circle at 92% 8%,rgba(255,236,150,.85),rgba(255,236,150,0) 45%)}
+.wxfx.fog{background:linear-gradient(180deg,rgba(255,255,255,.35),rgba(255,255,255,.1) 60%,rgba(255,255,255,.3));animation:wxc 10s ease-in-out infinite alternate}
+.dhero>*:not(.wxfx){position:relative}
+.wxbox{position:relative;display:flex;align-items:center;gap:12px;background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.35);border-radius:16px;padding:10px 14px;backdrop-filter:blur(2px)}
+.dhero{position:relative;overflow:hidden;border-radius:22px;padding:18px;color:#fff;background:linear-gradient(135deg,var(--c),color-mix(in srgb,var(--c) 70%,#000));display:flex;flex-direction:column;gap:6px}
 .tline{display:flex;flex-direction:column;position:relative}
 .trow{display:grid;grid-template-columns:48px 14px 1fr 34px;gap:8px;align-items:stretch;position:relative}
 .trow .th{font-family:'Space Grotesk';font-weight:700;font-size:15px;padding-top:14px;text-align:right}
@@ -460,6 +471,7 @@ function viewPlanes(){
     const l=r.l; return `<div class="trow" data-k="lug:${l.id}"><div class="th"><span class="muted">${ic('eat',18)}</span></div><div class="tdot"></div><button class="tcard" data-act="editlugar" data-id="${l.id}"><span class="tt">${esc(l.nombre)}</span><span class="small muted">${esc(l.comida)} · ${esc(l.ciudad)}</span></button><span class="grip" aria-label="Mover" title="Arrastra para ordenar">⋮⋮</span></div>`; };
   const cityQ=sel.city==='Vuelos'?'':sel.city;
   const KNOWN=[[/ana frank/i,'Casa de Ana Frank, Prinsengracht 263-267, Amsterdam'],[/parlamento europeo/i,'Parlamento Europeo, Rue Wiertz 60, Bruxelles']];
+  const WXH=wxHero(sel);
   const stops=rows.map(r=>{ if(r.kind==='lug') return r.l.nombre+', '+(r.l.ciudad||cityQ);
     const p=r.p; if(p.lugar) return /^-?\d+\.\d+,-?\d+\.\d+$/.test(p.lugar)?p.lugar:p.lugar+(cityQ?', '+cityQ:''); const k=KNOWN.find(x=>x[0].test(p.texto||'')); if(k) return k[1];
     const t=String(p.texto||''); if(t.length>45) return ''; const q=t.replace(/^(comer|cenar|desayunar|almorzar)( en)?\s+/i,'').trim(); return q?q+(cityQ?', '+cityQ:''):''; }).filter(x=>x.length>2).slice(0,8);
@@ -477,9 +489,9 @@ function viewPlanes(){
   return `<div class="stack-l" style="padding-top:20px"><div class="stack" style="gap:4px;padding:0 20px"><h1 style="font-size:30px">Planes</h1><div class="muted">Elige un día para ver todo lo que hacéis. Lo que añade uno lo ve el otro.</div></div>
   <div class="dstrip">${strip}</div>
   <div style="padding:0 20px" class="stack">
-   <div class="dhero" style="--c:${sel.c}"><div class="small" style="font-weight:700;text-transform:uppercase;letter-spacing:.6px">${DIAL[dd.getDay()]} ${dd.getDate()} ${MES[dd.getMonth()]} · ${esc(sel.city)}</div>
+   <div class="dhero" style="--c:${sel.c}">${WXH.fx.split(' ').filter(Boolean).map(f=>`<div class="wxfx ${f}"></div>`).join('')}<div class="small" style="font-weight:700;text-transform:uppercase;letter-spacing:.6px">${DIAL[dd.getDay()]} ${dd.getDate()} ${MES[dd.getMonth()]} · ${esc(sel.city)}</div>
      <div style="font-family:'Space Grotesk';font-size:24px;line-height:30px;font-weight:700">${esc(sel.title)}</div>
-     ${wxLine(sel)}
+     ${WXH.html}
      ${sel.sleep?`<div class="row small" style="gap:6px">${ic('bed',16)} Dormís en ${esc(sel.sleep)}</div>`:''}
      ${info.map(l=>`<div class="small" style="opacity:.85">${esc(l)}</div>`).join('')}${rutaUrl?`<button class="btn sm" data-act="openlink" data-u="${esc(rutaUrl)}" style="background:#fff;color:var(--ink);align-self:flex-start">${ic('route',18)} Ver ruta · ${fl||(lbl+' parada'+(lbl===1?'':'s')+(hq?' desde el hotel':''))}</button>`:`<div class="small" style="opacity:.75">${ic('route',14)} Pon «Lugar para el mapa» en un plan o añade un restaurante al día y aparecerá «Ver ruta».</div>`}</div>
    <button class="btn ams" data-act="addchoose" data-d="${sel.d}">${ic('plus')} Añadir al día</button>
@@ -808,6 +820,9 @@ async function loadWx(force){
   }catch(e){ S.wxErr=true; }
   render(['tiempo','planes']);
 }
+function wxFx(code){ return code==null?'':code===0?'sun':code<=2?'sun cloud':code===3?'cloud':code<=48?'fog':code<=67?'rain':code<=77?'snow':code<=82?'rain':code<=86?'snow':'rain'; }
+function wxHero(day){ const w=wxFor(wxCity(day),day.d); if(!w) return {fx:'',html:''}; const [e,t]=WMO(w.code);
+  return {fx:wxFx(w.code), html:`<div class="wxbox"><div style="font-size:54px;line-height:56px">${e}</div><div style="flex:1;min-width:0"><div style="font-weight:700;font-size:17px">${esc(t)}</div><div class="small" style="opacity:.95">💧 ${w.pp==null?'–':w.pp+'%'}${w.mm?' · '+w.mm+' mm':''} · 💨 ${Math.round(w.wind)} km/h</div></div><div style="text-align:right;font-family:'Space Grotesk';line-height:1"><div style="font-size:34px;font-weight:700">${Math.round(w.max)}°</div><div style="font-size:16px;opacity:.85">${Math.round(w.min)}°</div></div></div>`}; }
 function wxLine(day){ const w=wxFor(wxCity(day),day.d); if(!w) return ''; const [e,t]=WMO(w.code); return `<div class="row small" style="gap:6px;font-weight:600">${e} ${esc(t)} · ${Math.round(w.min)}°/${Math.round(w.max)}° · 💧 ${w.pp==null?'–':w.pp+'%'}${w.wind!=null?' · 💨 '+Math.round(w.wind)+' km/h':''}</div>`; }
 function viewTiempo(){
   const groups=[['Ámsterdam','var(--ams)','var(--ams-soft)',['2026-11-13','2026-11-14','2026-11-15','2026-11-16','2026-11-17']],['Brujas','var(--bru)','var(--bru-soft)',['2026-11-17','2026-11-18','2026-11-19']],['Gante','var(--bru)','var(--bru-soft)',['2026-11-18']],['Bruselas','var(--bxl)','var(--bxl-soft)',['2026-11-19','2026-11-20','2026-11-21']]];
