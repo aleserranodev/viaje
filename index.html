@@ -192,7 +192,7 @@ async function initFB(){
     catch(e){ db = F.getFirestore(app); }
     S.dbReady=true;
     listen();
-    seedGastos();
+    seedGastos(); seedLugares();
   }catch(e){ console.error(e); S.dbReady=false; toast('Sin conexión con la base de datos: se ve la información guardada.'); }
   render();
 }
@@ -208,6 +208,17 @@ function listen(){
   F.onSnapshot(colRef('archivos'), snap=>{ const a=[]; snap.forEach(d=>a.push({id:d.id,...d.data()})); S.archivos=a; render(['docs']); }, err);
   F.onSnapshot(colRef('lugares'), snap=>{ const a=[]; snap.forEach(d=>a.push({id:d.id,...d.data()})); S.lugares=a; render(['comer','planes']); }, err);
   F.onSnapshot(colRef('config'), snap=>{ const c={}; snap.forEach(d=>c[d.id]=d.data()); S.config=c; render(['hoteles','inicio']); }, err);
+}
+const SEED_LUGARES = [{"id": "sd01", "nombre": "Fabel Friet", "ciudad": "Ámsterdam", "comida": "Comida", "direccion": "Runstraat 1", "precio": "", "horario": "", "reserva": "Sin reserva · suele haber cola", "desc": "Las patatas fritas más famosas de Ámsterdam. Probad las de cheddar y parmesano y sus mayonesas caseras.", "etiqueta": "Patatas virales", "maps": "", "minutos": "", "foto": ""}, {"id": "sd02", "nombre": "Café Sonneveld", "ciudad": "Ámsterdam", "comida": "Comida", "direccion": "Egelantiersgracht 72-74", "precio": "", "horario": "", "reserva": "", "desc": "Comida típica: bocadillos bien llenos, hamburguesas, croquetas de ternera y estofado holandés. Café marrón con terraza frente a la Westerkerk y paredes con fotos de Wim Sonneveld.", "etiqueta": "Comida típica", "maps": "", "minutos": "", "foto": ""}, {"id": "sd03", "nombre": "Il Vicolo", "ciudad": "Ámsterdam", "comida": "Cena", "direccion": "Taksteeg 3", "precio": "", "horario": "Lun y mié 17:00–21:15 · mar cerrado · jue–dom 12:00–21:15", "reserva": "No acepta reservas", "desc": "Italiano auténtico. La carbonara, dicen, es brutal.", "etiqueta": "Carbonara", "maps": "", "minutos": "", "foto": ""}, {"id": "sd04", "nombre": "The Pantry", "ciudad": "Ámsterdam", "comida": "Cena", "direccion": "Leidsekruisstraat 21", "precio": "Menú ≈ 24 € (sin confirmar)", "horario": "L–V 17:00–23:00 · S–D 12:00–23:00", "reserva": "Conviene reservar · 020 620 0922", "desc": "Comida tradicional holandesa: arenque, stamppot (puré con verduras y salchicha), con patatas o verdura de guarnición.", "etiqueta": "Comida holandesa", "maps": "", "minutos": "", "foto": ""}, {"id": "sd05", "nombre": "Cannibale Royale", "ciudad": "Ámsterdam", "comida": "Cena", "direccion": "Handboogstraat 17-19", "precio": "Hamburguesa ≈ 15–17 €", "horario": "", "reserva": "", "desc": "Hamburguesas a la brasa. Por la noche siguen con copas.", "etiqueta": "Hamburguesas", "maps": "", "minutos": "", "foto": ""}, {"id": "sd06", "nombre": "Foodhallen", "ciudad": "Ámsterdam", "comida": "Comida", "direccion": "Bellamyplein 51", "precio": "", "horario": "L–J 11:00–23:30 · V–S hasta tarde (confirmar)", "reserva": "", "desc": "Mercado cubierto con unos 20 puestos de comida de todo el mundo. Ahí está \"At Pastrami\", por si queréis pastrami.", "etiqueta": "Mercado de comida", "maps": "", "minutos": "", "foto": ""}, {"id": "sd07", "nombre": "New York Deli", "ciudad": "Ámsterdam", "comida": "Comida", "direccion": "", "precio": "", "horario": "", "reserva": "", "desc": "Sándwich de pastrami como los de Nueva York. Dirección por confirmar.", "etiqueta": "Pastrami", "maps": "", "minutos": "", "foto": ""}, {"id": "sd08", "nombre": "Warme Bakker", "ciudad": "Ámsterdam", "comida": "Comida", "direccion": "", "precio": "", "horario": "", "reserva": "", "desc": "Bocadillos baratos en el centro, para si vamos mal de dinero. Dirección por confirmar.", "etiqueta": "Barato", "maps": "", "minutos": "", "foto": ""}, {"id": "sd09", "nombre": "Burger 'n Shake", "ciudad": "Ámsterdam", "comida": "Cena", "direccion": "", "precio": "", "horario": "", "reserva": "", "desc": "Hamburguesas baratas y buenas. Dirección por confirmar.", "etiqueta": "Hamburguesas baratas", "maps": "", "minutos": "", "foto": ""}, {"id": "sd10", "nombre": "Davie's Sandwiches", "ciudad": "Ámsterdam", "comida": "Comida", "direccion": "Zona Egelantiersgracht / Leliestraat (dirección por confirmar)", "precio": "", "horario": "", "reserva": "", "desc": "Cinco sándwiches: Lelie (pastrami, mostaza y pepinillos), Ba-da-bing (coppa ibérico, ricotta y tomate), Mumbai (vegetariano), Lox (salmón ahumado) y el sándwich del día.", "etiqueta": "Sándwiches", "maps": "", "minutos": "", "foto": ""}, {"id": "sd11", "nombre": "Breadwinner", "ciudad": "Ámsterdam", "comida": "Comida", "direccion": "Tweede Laurierdwarsstraat 50", "precio": "", "horario": "", "reserva": "", "desc": "Bagels: everything bagel, salmón ahumado con queso crema o pastrami con chucrut.", "etiqueta": "Bagels", "maps": "", "minutos": "", "foto": ""}, {"id": "sd12", "nombre": "EDTN (sándwiches)", "ciudad": "Ámsterdam", "comida": "Comida", "direccion": "", "precio": "", "horario": "", "reserva": "", "desc": "Nombre por confirmar: no he encontrado este sitio. Cuando tengas el nombre exacto o el enlace de Maps, edítalo.", "etiqueta": "Sándwiches", "maps": "", "minutos": "", "foto": ""}];
+async function seedLugares(){
+  try{
+    const f = await F.getDoc(docRef('config','seed_lugares1'));
+    if(f.exists()) return;
+    const b = F.writeBatch(db);
+    SEED_LUGARES.forEach((l,i)=>{ const {id,...d}=l; b.set(docRef('lugares',id),{...d,creado:1700000000000+i}); });
+    b.set(docRef('config','seed_lugares1'),{v:true});
+    await b.commit();
+  }catch(e){ console.error('seedLugares',e); }
 }
 async function seedGastos(){
   try{
@@ -362,6 +373,7 @@ function lugarCard(l){
   return `<div class="card">
     ${l.foto?`<div class="photo"><img src="${l.foto}" alt="${esc(l.nombre)}" loading="lazy"></div>`:''}
     <div class="card-p stack" style="gap:10px">
+      ${l.etiqueta?`<div><span class="chip" style="background:var(--ams);color:var(--ink);font-weight:700">${esc(l.etiqueta)}</span></div>`:''}
       <div><h2 style="font-size:22px;line-height:28px">${esc(l.nombre)}</h2>
         ${l.direccion?`<div class="row small muted" style="gap:6px;align-items:flex-start;margin-top:2px"><span style="margin-top:1px">${ic('pin',16)}</span><span>${esc(l.direccion)}</span></div>`:''}</div>
       <div class="wrap">${l.minutos?`<span class="chip walk">${ic('walk',14,2)}${esc(l.minutos)} min andando del hotel</span>`:''}${l.precio?`<span class="chip price">${esc(l.precio)}</span>`:''}${l.horario?`<span class="chip">${esc(l.horario)}</span>`:''}${l.reserva?`<span class="chip">${esc(l.reserva)}</span>`:''}${l.dia?`<span class="chip warn">${fmtFecha(l.dia)}</span>`:''}</div>
@@ -545,6 +557,7 @@ function sheetLugar(l,pre){
    <label class="f">Nombre *<input class="in" id="l-n" value="${esc(l.nombre)}" placeholder="Nombre del restaurante"></label>
    <div class="row" style="gap:10px;align-items:flex-start"><label class="f" style="flex:1">Ciudad<select class="in" id="l-c">${opt(CIT,l.ciudad)}</select></label>
    <label class="f" style="flex:1">Comida<select class="in" id="l-m">${opt(['Desayuno','Comida','Cena'],l.comida)}</select></label></div>
+   <label class="f">Etiqueta (lo más típico o su estilo)<input class="in" id="l-e" value="${esc(l.etiqueta||'')}" placeholder="Pancakes, Carbonara, Viral…"></label>
    <label class="f">Dirección<input class="in" id="l-d" value="${esc(l.direccion)}" placeholder="Calle y número"></label>
    <div class="row" style="gap:10px;align-items:flex-start"><label class="f" style="flex:1">Precio<input class="in" id="l-p" value="${esc(l.precio)}" placeholder="10–20 €"></label>
    <label class="f" style="flex:1">Min. andando del hotel<input class="in" id="l-w" inputmode="numeric" value="${esc(l.minutos)}" placeholder="10"></label></div>
@@ -565,7 +578,7 @@ function sheetLugar(l,pre){
       let foto=l.foto||''; if($('#l-q')&&$('#l-q').checked) foto='';
       const file=$('#l-f').files[0];
       if(file){ const b=await shrinkImage(file,300*1024,1200); if(b.size>300*1024) throw new Error('La foto pesa demasiado. Prueba con otra.'); foto=await toDataURL(b); }
-      const data={nombre,ciudad:$('#l-c').value,comida:$('#l-m').value,direccion:$('#l-d').value.trim(),precio:$('#l-p').value.trim(),minutos:$('#l-w').value.trim(),horario:$('#l-h').value.trim(),reserva:$('#l-r').value.trim(),desc:$('#l-x').value.trim(),maps,dia:$('#l-dia').value,foto,creado:l.creado||Date.now()};
+      const data={nombre,ciudad:$('#l-c').value,comida:$('#l-m').value,direccion:$('#l-d').value.trim(),precio:$('#l-p').value.trim(),minutos:$('#l-w').value.trim(),horario:$('#l-h').value.trim(),reserva:$('#l-r').value.trim(),desc:$('#l-x').value.trim(),etiqueta:$('#l-e').value.trim(),maps,dia:$('#l-dia').value,foto,creado:l.creado||Date.now()};
       const ok=await dbDo(()=> nuevo ? F.addDoc(colRef('lugares'),data) : F.setDoc(docRef('lugares',l.id),data));
       if(ok){ if(S.tab==='comer'&&!S.sub){ S.city=data.ciudad; S.meal=data.comida; } closeSheet(); render(); }
       else { btn.disabled=false; $('#l-m2').textContent=''; }
