@@ -777,12 +777,12 @@ async function openMapAll(){
     const m=L.marker(ll,{icon:L.divIcon({className:'',html:`<div style="background:${col};color:#fff;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4);width:28px;height:28px;border-radius:14px;display:flex;align-items:center;justify-content:center;font:700 13px Space Grotesk,sans-serif">${i+1}</div>`,iconSize:[28,28],iconAnchor:[14,14]})}).addTo(map);
     m.bindPopup(`<b>${esc(it.n)}</b><br><span style="font-size:12px">${esc(it.a)}</span><br><a href="${esc(g)}" target="_blank" rel="noopener">Abrir en Google Maps</a> · <a href="${esc(d)}" target="_blank" rel="noopener">Cómo llegar</a>`);
     pts.push(ll); map.fitBounds(L.latLngBounds(pts).pad(.15),{maxZoom:16}); };
-  const BB={'Ámsterdam':[4.72,52.28,5.08,52.45],'Brujas':[3.12,51.17,3.32,51.25],'Gante':[3.62,50.99,3.84,51.12],'Bruselas':[4.25,50.77,4.50,50.93]}[city]||[2,50,7,53];
+  const BB={'Ámsterdam':[4.80,52.32,4.99,52.43],'Brujas':[3.12,51.17,3.32,51.25],'Gante':[3.62,50.99,3.84,51.12],'Bruselas':[4.25,50.77,4.50,50.93]}[city]||[2,50,7,53];
   const nom=async q=>{ const r=await fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&limit=3&bounded=1&viewbox=${BB[0]},${BB[3]},${BB[2]},${BB[1]}&q=`+encodeURIComponent(q)).then(x=>x.json()); const x=r.find(z=>+z.lon>=BB[0]&&+z.lon<=BB[2]&&+z.lat>=BB[1]&&+z.lat<=BB[3]); return x?[+x.lat,+x.lon]:null; };
   let saved=false;
   for(let i=0;i<items.length;i++){
-    if(!$('#mapov')) return; const it=items[i]; const key=hashQ('v2|'+[it.n,it.a,it.c].join('|')); let ll=geo[key];
-    if(!ll){ try{ ll=it.a?await nom(it.a+', '+it.c):null; await new Promise(r=>setTimeout(r,1100)); if(!ll){ ll=await nom(it.n+', '+it.c); await new Promise(r=>setTimeout(r,1100)); } }catch(e){ ll=null; }
+    if(!$('#mapov')) return; const it=items[i]; const key=hashQ('v3|'+[it.n,it.a,it.c].join('|')); let ll=geo[key];
+    if(!ll){ try{ ll=it.a?await nom(it.a+', '+it.c):null; await new Promise(r=>setTimeout(r,1100)); if(!ll&&it.a&&/Dweerstraat/.test(it.a)){ ll=await nom(it.a.replace('Dweerstraat','Dweersstraat')+', '+it.c); await new Promise(r=>setTimeout(r,1100)); } if(!ll){ ll=await nom(it.n+', '+it.c); await new Promise(r=>setTimeout(r,1100)); } }catch(e){ ll=null; }
       if(ll){ geo[key]=ll; saved=true; try{ localStorage.setItem('viaje.geo',JSON.stringify(geo)); }catch(_){} if(S.dbReady) F.setDoc(docRef('config','geo'),{[key]:ll},{merge:true}).catch(()=>{}); } }
     done++; if(ll) add(it,ll,i); else miss++; upd();
   }
