@@ -365,8 +365,11 @@ function viewComer(){
     <div style="padding:0 20px"><div class="small muted" style="font-weight:600">Viaje noviembre 2026</div><h1 style="font-size:30px">Comer</h1></div>
     <div class="pills">${cities.map(c=>`<button class="pill ${S.city===c?'on':''}" style="--c:${CITYC[c]}" data-act="city" data-v="${c}">${c==='Ámsterdam'?'':`<span class="dot" style="background:${CITYC[c]}"></span>`}${c}</button>`).join('')}</div>
     <div style="padding:0 20px"><div class="seg">${meals.map(m=>`<button class="${S.meal===m?'on':''}" data-act="meal" data-v="${m}">${m}</button>`).join('')}</div></div>
+    <div style="padding:0 20px"><input id="c-q" class="in" type="search" placeholder="Buscar en la lista (nombre, tipo, dirección)…" value="${esc(S.cq||'')}" autocomplete="off" style="width:100%"></div>
     <div class="stack" style="padding:0 20px"><button class="btn ams" data-act="addlugar">${ic('plus')} Añadir sitio en ${S.city} (${S.meal.toLowerCase()})</button>${body}</div></div>`;
 }
+function applyCq(){ const q=(S.cq||'').trim().toLowerCase(); const nf=s=>s.normalize('NFD').replace(/[\u0300-\u036f]/g,''); const qq=nf(q); let n=0; document.querySelectorAll('.card').forEach(c=>{ const ok=!qq||nf(c.textContent.toLowerCase()).includes(qq); c.style.display=ok?'':'none'; if(ok)n++; }); const root=document.querySelector('#c-q'); if(root){ let m=document.querySelector('#c-none'); if(qq&&!n){ if(!m){ m=document.createElement('div'); m.id='c-none'; m.className='small muted'; m.style.padding='0 20px'; m.textContent='Ningún sitio coincide en esta lista.'; root.parentNode.after(m);} } else if(m) m.remove(); } }
+document.addEventListener('input',e=>{ if(e.target&&e.target.id==='c-q'){ S.cq=e.target.value; applyCq(); } });
 function lugarCard(l){
   const key='u-'+l.id; const prob=!!S.marcas['probado:'+key], fav=!!S.marcas['fav:'+key];
   const maps = l.maps || mapsUrl([l.nombre,l.direccion,l.ciudad].filter(Boolean).join(' '));
@@ -476,7 +479,7 @@ function render(only){
   if(!S.code){ renderGate(); return; }
   if(only && !only.includes(currentName())) { renderTabs(); return; }
   const v={inicio:viewInicio,ruta:viewRuta,comer:viewComer,planes:viewPlanes,mas:viewMas,hoteles:viewHoteles,docs:viewDocs,gastos:viewGastos}[currentName()];
-  const y=window.scrollY; $('#view').innerHTML=v(); renderTabs(); if(only) window.scrollTo(0,y);
+  const y=window.scrollY; $('#view').innerHTML=v(); if(currentName()==='comer') applyCq(); renderTabs(); if(only) window.scrollTo(0,y);
 }
 function renderTabs(){
   if(!S.code){ $('#tabs').innerHTML=''; return; }
