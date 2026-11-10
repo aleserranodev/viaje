@@ -342,7 +342,7 @@ function viewComer(){
       const mins = p.minutos_andando_hotel; const walk = `${p.estimado?'≈ ':''}${mins} min andando del hotel`;
       const badge = p.viral ? '<span class="badge hot">Sí o sí · viral</span>' : (BADGE[p.nombre]?`<span class="badge">${BADGE[p.nombre]}</span>`:'');
       return `<div class="card">
-        <div class="photo"><img src="./${p.foto}" alt="${esc(p.nombre)}" loading="lazy">${badge}</div>
+        <div class="photo"><img src="${(S.lugares.find(l=>l.comida==='Foto'&&l.nombre===p.nombre&&l.foto)||{}).foto||('./'+p.foto)}" alt="${esc(p.nombre)}" loading="lazy">${badge}</div>
         <div class="card-p stack" style="gap:10px">
           <div><h2 style="font-size:22px;line-height:28px">${esc(p.nombre)}</h2>
             <div class="row small muted" style="gap:6px;align-items:flex-start;margin-top:2px"><span style="margin-top:1px">${ic('pin',16)}</span><span>${esc(p.direccion)}</span></div></div>
@@ -557,7 +557,7 @@ function sheetLugar(l,pre){
   openSheet(`${sheetHead(nuevo?'Añadir sitio':'Editar sitio')}
    <label class="f">Nombre *<input class="in" id="l-n" value="${esc(l.nombre)}" placeholder="Nombre del restaurante"></label>
    <div class="row" style="gap:10px;align-items:flex-start"><label class="f" style="flex:1">Ciudad<select class="in" id="l-c">${opt(CIT,l.ciudad)}</select></label>
-   <label class="f" style="flex:1">Comida<select class="in" id="l-m">${opt(['Desayuno','Comida','Cena'],l.comida)}</select></label></div>
+   <label class="f" style="flex:1">Comida<select class="in" id="l-m">${opt(['Desayuno','Comida','Cena'],l.comida)}<option value="Foto" hidden>Foto</option></select></label></div>
    <label class="f">Etiqueta (lo más típico o su estilo)<input class="in" id="l-e" value="${esc(l.etiqueta||'')}" placeholder="Pancakes, Carbonara, Viral…"></label>
    <label class="f">Dirección<input class="in" id="l-d" value="${esc(l.direccion)}" placeholder="Calle y número"></label>
    <div class="row" style="gap:10px;align-items:flex-start"><label class="f" style="flex:1">Precio<input class="in" id="l-p" value="${esc(l.precio)}" placeholder="10–20 €"></label>
