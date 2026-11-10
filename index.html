@@ -458,18 +458,24 @@ function viewPlanes(){
   const stops=rows.map(r=>{ if(r.kind==='lug') return r.l.nombre+', '+(r.l.ciudad||cityQ);
     const p=r.p; if(p.lugar) return p.lugar+(cityQ?', '+cityQ:''); const k=KNOWN.find(x=>x[0].test(p.texto||'')); if(k) return k[1];
     const t=String(p.texto||''); if(t.length>45) return ''; const q=t.replace(/^(comer|cenar|desayunar|almorzar)( en)?\s+/i,'').trim(); return q?q+(cityQ?', '+cityQ:''):''; }).filter(x=>x.length>2).slice(0,8);
-  const hot=HOTELES.find(h=>sel.sleep&&sel.sleep.startsWith(h.city)); const hq=hot?hot.q:'';
-  const full=stops.length?(hq?[hq,...stops,hq]:stops):[];
+  const isFly=sel.city==='Vuelos', first=sel.d===DAYS[0].d;
+  const hot=isFly?HOTELES.find(h=>h.id===(first?'ams':'bxl')):HOTELES.find(h=>sel.sleep&&sel.sleep.startsWith(h.city)); const hq=hot?hot.q:'';
+  let full=[], lbl=0, fl=null;
+  if(isFly){
+    const pl=it.plans.find(p=>p.lugar); const air=pl?pl.lugar:(first?'Schiphol Airport, Amsterdam':'Brussels Airport, Zaventem');
+    const mid=it.lug.map(l=>l.nombre+', '+(l.ciudad||'')); lbl=1+mid.length;
+    full=first?[air,...mid,hq]:[hq,...mid,air]; fl=first?'Aeropuerto → hotel':'Hotel → aeropuerto';
+  } else if(stops.length){ full=hq?[hq,...stops,hq]:stops; lbl=stops.length; }
   let rutaUrl='';
   if(full.length===1) rutaUrl='https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(full[0]);
-  else if(full.length>1) rutaUrl='https://www.google.com/maps/dir/?api=1&travelmode=walking&origin='+encodeURIComponent(full[0])+'&destination='+encodeURIComponent(full[full.length-1])+(full.length>2?'&waypoints='+encodeURIComponent(full.slice(1,-1).join('|')):'');
+  else if(full.length>1) rutaUrl='https://www.google.com/maps/dir/?api=1&travelmode='+(isFly?'transit':'walking')+'&origin='+encodeURIComponent(full[0])+'&destination='+encodeURIComponent(full[full.length-1])+(full.length>2?'&waypoints='+encodeURIComponent(full.slice(1,-1).join('|')):'');
   return `<div class="stack-l" style="padding-top:20px"><div class="stack" style="gap:4px;padding:0 20px"><h1 style="font-size:30px">Planes</h1><div class="muted">Elige un día para ver todo lo que hacéis. Lo que añade uno lo ve el otro.</div></div>
   <div class="dstrip">${strip}</div>
   <div style="padding:0 20px" class="stack">
    <div class="dhero" style="--c:${sel.c}"><div class="small" style="font-weight:700;text-transform:uppercase;letter-spacing:.6px">${DIAL[dd.getDay()]} ${dd.getDate()} ${MES[dd.getMonth()]} · ${esc(sel.city)}</div>
      <div style="font-family:'Space Grotesk';font-size:24px;line-height:30px;font-weight:700">${esc(sel.title)}</div>
      ${sel.sleep?`<div class="row small" style="gap:6px">${ic('bed',16)} Dormís en ${esc(sel.sleep)}</div>`:''}
-     ${info.map(l=>`<div class="small" style="opacity:.85">${esc(l)}</div>`).join('')}${rutaUrl?`<button class="btn sm" data-act="openlink" data-u="${esc(rutaUrl)}" style="background:#fff;color:var(--ink);align-self:flex-start">${ic('route',18)} Ver ruta · ${stops.length} parada${stops.length===1?'':'s'}${hq?' desde el hotel':''}</button>`:`<div class="small" style="opacity:.75">${ic('route',14)} Pon «Lugar para el mapa» en un plan o añade un restaurante al día y aparecerá «Ver ruta».</div>`}</div>
+     ${info.map(l=>`<div class="small" style="opacity:.85">${esc(l)}</div>`).join('')}${rutaUrl?`<button class="btn sm" data-act="openlink" data-u="${esc(rutaUrl)}" style="background:#fff;color:var(--ink);align-self:flex-start">${ic('route',18)} Ver ruta · ${fl||(lbl+' parada'+(lbl===1?'':'s')+(hq?' desde el hotel':''))}</button>`:`<div class="small" style="opacity:.75">${ic('route',14)} Pon «Lugar para el mapa» en un plan o añade un restaurante al día y aparecerá «Ver ruta».</div>`}</div>
    <button class="btn ams" data-act="addchoose" data-d="${sel.d}">${ic('plus')} Añadir al día</button>
    ${rows.length?`<div class="tline">${rows.map(row).join('')}</div>`:`<div class="empty"><div style="font-weight:700;color:var(--ink);margin-bottom:4px">Día libre</div>Nada fijado todavía. Añade un plan o un restaurante con el botón de arriba, o con el + desde la pestaña Comer.</div>`}
   </div></div>`;
@@ -613,13 +619,25 @@ function sheetPlan(dia0,p,pre){ pre=pre||{};
    <label class="f">Día<select class="in" id="p-dia">${DAYS.map(x=>{const dd=new Date(x.d+'T12:00:00'); return `<option value="${x.d}" ${x.d===def?'selected':''}>${DIAL[dd.getDay()]} ${dd.getDate()} ${MES[dd.getMonth()]} · ${x.city}</option>`}).join('')}</select></label>
    <label class="f">Hora (opcional)<input class="in" id="p-h" type="time" value="${esc(p.hora)}"></label>
    <label class="f">Plan<textarea class="in" id="p-t" placeholder="Qué vais a hacer, dónde, si hay que reservar…">${esc(p.texto)}</textarea></label>
-   <label class="f">Lugar para el mapa (opcional)<input class="in" id="p-lg" placeholder="Nombre o dirección, ej. Foodhallen" value="${esc(p.lugar||'')}"></label>
+   <div class="f">Lugar para el mapa (opcional)<input class="in" id="p-lg" autocomplete="off" placeholder="Escribe un sitio y elige de la lista" value="${esc(p.lugar||'')}">
+   <div id="p-sg" class="stack" style="gap:6px;margin-top:6px"></div>
+   <a class="btn ghost sm" id="p-mp" target="_blank" rel="noopener" style="margin-top:6px">${ic('out',16)} Buscar en Google Maps</a>
+   <div class="small muted">En Maps: abre el sitio, toca Compartir → Copiar y pega aquí el enlace (o su nombre/dirección).</div></div>
    <label class="f">Enlace (opcional)<input class="in" id="p-l" type="url" inputmode="url" placeholder="https://…" value="${esc(p.enlace||'')}"></label>
    <label class="f">Documento ligado (opcional)<select class="in" id="p-a"><option value="">Ninguno</option>${S.archivos.map(a=>`<option value="${a.id}" ${a.id===p.archivoId?'selected':''}>${esc(a.titulo)}</option>`).join('')}</select></label>
    <button class="btn ams" id="p-ok">Guardar</button>${nuevo?'':`<button class="btn danger" id="p-del">${ic('trash',18)} Borrar plan</button>`}`);
+  const pcity=()=>{ const c=(DAYS.find(z=>z.d===$('#p-dia').value)||{}).city; return c&&c!=='Vuelos'?c:''; };
+  const setMp=()=>{ $('#p-mp').href='https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(($('#p-lg').value.trim()||$('#p-t').value.trim()||'')+' '+pcity()); }; setMp();
+  let tmr=0; $('#p-lg').addEventListener('input',()=>{ setMp(); clearTimeout(tmr); const v=$('#p-lg').value.trim(); if(v.length<3||/^https?:/i.test(v)){ $('#p-sg').innerHTML=''; return; }
+    tmr=setTimeout(async()=>{ try{ const r=await fetch('https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=5&accept-language=es&q='+encodeURIComponent(v+' '+pcity())).then(x=>x.json());
+      $('#p-sg').innerHTML=r.map((x,i)=>{ const a=x.address||{}; const nm=x.name||a.road||''; const st=[a.road,a.house_number].filter(Boolean).join(' '); const lab=[nm,st&&st!==nm?st:'',a.city||a.town||a.village||''].filter(Boolean).join(', '); return `<button class="listrow" data-sg="${esc(lab)}" style="padding:10px 12px"><span class="small" style="text-align:left">${esc(lab)}</span></button>`; }).join(''); }catch(e){ $('#p-sg').innerHTML=''; } },600); });
+  $('#p-sg').onclick=e=>{ const b=e.target.closest('[data-sg]'); if(!b) return; e.stopPropagation(); $('#p-lg').value=b.dataset.sg; $('#p-sg').innerHTML=''; setMp(); };
   $('#p-ok').onclick=async()=>{ const t=$('#p-t').value.trim(); if(!t){ toast('Escribe el plan.'); return; }
+    let lg=$('#p-lg').value.trim();
+    if(/^https?:/i.test(lg)){ const m=lg.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/)||lg.match(/!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/)||lg.match(/[?&](?:q|query|destination)=(-?\d+\.\d+)(?:,|%2C)(-?\d+\.\d+)/); const nm=(lg.match(/\/maps\/place\/([^/@?]+)/)||[])[1];
+      if(nm){ lg=decodeURIComponent(nm.replace(/\+/g,' ')); } else if(m){ lg=m[1]+','+m[2]; } else { toast('Ese enlace corto de Maps no lo puedo leer. Pega el nombre o elige uno de la lista.'); return; } }
     const dia=$('#p-dia').value; let enlace=$('#p-l').value.trim(); if(enlace&&!/^https?:\/\//i.test(enlace)) enlace='https://'+enlace;
-    const data={dia,hora:$('#p-h').value,texto:t,lugar:$('#p-lg').value.trim(),enlace,archivoId:$('#p-a').value};
+    const data={dia,hora:$('#p-h').value,texto:t,lugar:lg,enlace,archivoId:$('#p-a').value};
     const ok=await dbDo(()=> nuevo ? F.addDoc(colRef('planes'),{...data,creado:Date.now()}) : F.setDoc(docRef('planes',p.id),{...data,orden:(p.dia===dia&&p.orden!=null)?p.orden:null,creado:p.creado||Date.now()}));
     if(ok){ closeSheet(); S.pd=dia; if(S.pick){ S.pick=null; S.tab='planes'; S.sub=null; render(); window.scrollTo(0,0);} else render(); } };
   if(!nuevo) $('#p-del').onclick=async()=>{ const ok=await dbDo(()=>F.deleteDoc(docRef('planes',p.id))); if(ok) closeSheet(); };
