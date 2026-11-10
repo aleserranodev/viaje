@@ -344,7 +344,7 @@ function viewComer(){
       return `<div class="card">
         <div class="photo"><img src="./${p.foto}" alt="${esc(p.nombre)}" loading="lazy">${badge}</div>
         <div class="card-p stack" style="gap:10px">
-          <div><h2 style="font-size:22px;line-height:28px">${p.orden}. ${esc(p.nombre)}</h2>
+          <div><h2 style="font-size:22px;line-height:28px">${esc(p.nombre)}</h2>
             <div class="row small muted" style="gap:6px;align-items:flex-start;margin-top:2px"><span style="margin-top:1px">${ic('pin',16)}</span><span>${esc(p.direccion)}</span></div></div>
           <div class="wrap"><span class="chip walk">${ic('walk',14,2)}${walk}</span><span class="chip price">${esc(p.precio)}</span><span class="chip">${esc(p.horario)}</span>${p.reserva&&!/cola|^no\b|^sin reserva/i.test(p.reserva)?`<span class="chip">${esc(p.reserva)}</span>`:''}</div>
           ${DESC[p.nombre]?`<p style="margin:0;font-size:14px;line-height:21px;color:#3D352C">${esc(DESC[p.nombre])}</p>`:''}
