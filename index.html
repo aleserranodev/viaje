@@ -188,6 +188,7 @@ const IC = {
   file:'<path d="M7 3h7l5 5v11a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zM14 3v5h5"/>',
   x:'<path d="M6 6l12 12M18 6L6 18"/>',
   camera:'<path d="M4 8h3l1.5-2h7L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="3.5"/>',
+  sun:'<circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6L7 7M17 17l1.4 1.4M18.4 5.6L17 7M7 17l-1.4 1.4"/>',
   key:'<circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M16 7l3 3"/>'
 };
 const ic = (n,s=22,sw=1.8) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${IC[n]}</svg>`;
@@ -200,7 +201,7 @@ const S = {
   yo: normP(store.get('viaje.yo')) || 'Alejandro',
   lugares:[], gTab:'lista',
   gastos: DATA.gastos.lineas.map((l,i)=>({id:'g'+(i+1), fecha:l[0], concepto:l[1], total:Math.round(l[2]*100), pagador:'Cristina', local:true, orden:i})),
-  marcas:{}, planes:[], archivos:[], fotos:[], fday:'', fcity:'', config:{},
+  marcas:{}, planes:[], archivos:[], fotos:[], wx:null, wxAt:0, fday:'', fcity:'', config:{},
   online:false, dbReady:false
 };
 const CITYC = {'Ámsterdam':'var(--ams)','Brujas':'var(--bru)','Gante':'var(--bru)','Bruselas':'var(--bxl)'};
@@ -478,6 +479,7 @@ function viewPlanes(){
   <div style="padding:0 20px" class="stack">
    <div class="dhero" style="--c:${sel.c}"><div class="small" style="font-weight:700;text-transform:uppercase;letter-spacing:.6px">${DIAL[dd.getDay()]} ${dd.getDate()} ${MES[dd.getMonth()]} · ${esc(sel.city)}</div>
      <div style="font-family:'Space Grotesk';font-size:24px;line-height:30px;font-weight:700">${esc(sel.title)}</div>
+     ${wxLine(sel)}
      ${sel.sleep?`<div class="row small" style="gap:6px">${ic('bed',16)} Dormís en ${esc(sel.sleep)}</div>`:''}
      ${info.map(l=>`<div class="small" style="opacity:.85">${esc(l)}</div>`).join('')}${rutaUrl?`<button class="btn sm" data-act="openlink" data-u="${esc(rutaUrl)}" style="background:#fff;color:var(--ink);align-self:flex-start">${ic('route',18)} Ver ruta · ${fl||(lbl+' parada'+(lbl===1?'':'s')+(hq?' desde el hotel':''))}</button>`:`<div class="small" style="opacity:.75">${ic('route',14)} Pon «Lugar para el mapa» en un plan o añade un restaurante al día y aparecerá «Ver ruta».</div>`}</div>
    <button class="btn ams" data-act="addchoose" data-d="${sel.d}">${ic('plus')} Añadir al día</button>
@@ -490,6 +492,7 @@ function viewMas(){
     ${row('hoteles','bed','Hoteles','Dirección, fechas y notas de cada alojamiento','var(--ams-ink)','var(--ams-soft)')}
     ${row('docs','doc','Documentos','Billetes, entradas y reservas','var(--fly-ink)','var(--fly-soft)')}
     ${row('fotos','camera','Fotos','Las fotos del viaje, por día y ciudad','var(--bxl-ink)','var(--bxl-soft)')}
+    ${row('tiempo','sun','Tiempo','Previsión por ciudad y día del viaje','var(--fly-ink)','var(--fly-soft)')}
     ${row('ruta','route','Ruta','Día a día, del viernes 13 al sábado 21','var(--ams-ink)','var(--ams-soft)')}
     <div class="stack"><div class="small muted">Eres <b>${esc(S.yo)}</b> en este móvil.</div>
     <div class="row" style="gap:8px"><button class="btn ghost sm" data-act="chyo" style="flex:1">Cambiar quién soy</button><button class="btn ghost sm" data-act="chcode" style="flex:1">${ic('key',18)} Cambiar código</button></div></div></div>`;
@@ -564,7 +567,7 @@ function currentName(){ return S.sub || S.tab; }
 function render(only){
   if(!S.code){ renderGate(); return; }
   if(only && !only.includes(currentName())) { renderTabs(); return; }
-  const v={inicio:viewInicio,ruta:()=>(S.sub==='ruta'?backRow():'')+viewRuta(),comer:viewComer,planes:viewPlanes,mas:viewMas,hoteles:viewHoteles,docs:viewDocs,fotos:viewFotos,gastos:viewGastos}[currentName()];
+  const v={inicio:viewInicio,ruta:()=>(S.sub==='ruta'?backRow():'')+viewRuta(),comer:viewComer,planes:viewPlanes,mas:viewMas,hoteles:viewHoteles,docs:viewDocs,fotos:viewFotos,tiempo:viewTiempo,gastos:viewGastos}[currentName()];
   const y=window.scrollY; $('#view').innerHTML=v(); if(currentName()==='comer') applyCq(); if(currentName()==='planes'){ const o=document.querySelector('.dtile.on'); if(o&&o.parentNode) o.parentNode.scrollLeft=o.offsetLeft-o.parentNode.clientWidth/2+o.offsetWidth/2; } renderTabs(); if(only) window.scrollTo(0,y);
 }
 function renderTabs(){
@@ -788,6 +791,32 @@ async function openMapAll(){
   }
   upd();
 }
+
+/* ====================== tiempo ====================== */
+const WXC={Ámsterdam:[52.372,4.893],Brujas:[51.209,3.225],Gante:[51.054,3.722],Bruselas:[50.846,4.352]};
+const WMO=c=>c===0?['☀️','Despejado']:c<=2?['🌤️','Poco nuboso']:c===3?['☁️','Nublado']:c<=48?['🌫️','Niebla']:c<=57?['🌦️','Llovizna']:c<=67?['🌧️','Lluvia']:c<=77?['🌨️','Nieve']:c<=82?['🌧️','Chubascos']:c<=86?['🌨️','Nevadas']:['⛈️','Tormenta'];
+function wxCity(day){ const c=day.city; if(c!=='Vuelos') return c; return day.d===DAYS[0].d?'Ámsterdam':'Bruselas'; }
+function wxFor(city,d){ const w=S.wx&&S.wx[city]; if(!w) return null; const i=w.time.indexOf(d); return i<0?null:{code:w.weather_code[i],max:w.temperature_2m_max[i],min:w.temperature_2m_min[i],pp:w.precipitation_probability_max[i],mm:w.precipitation_sum[i],wind:w.wind_speed_10m_max[i]}; }
+async function loadWx(force){
+  if(!force&&S.wx&&Date.now()-S.wxAt<30*60e3) return;
+  if(!S.wx){ try{ const c=JSON.parse(localStorage.getItem('viaje.wx')||'null'); if(c){ S.wx=c.d; S.wxAt=c.t; } }catch(_){} if(!force&&S.wx&&Date.now()-S.wxAt<30*60e3){ render(['tiempo','planes']); return; } }
+  const names=Object.keys(WXC);
+  try{
+    const r=await fetch('https://api.open-meteo.com/v1/forecast?latitude='+names.map(n=>WXC[n][0]).join(',')+'&longitude='+names.map(n=>WXC[n][1]).join(',')+'&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,precipitation_sum,wind_speed_10m_max&timezone=Europe%2FBrussels&forecast_days=16').then(x=>{ if(!x.ok) throw 0; return x.json(); });
+    const d={}; names.forEach((n,i)=>d[n]=r[i].daily); S.wx=d; S.wxAt=Date.now(); try{ localStorage.setItem('viaje.wx',JSON.stringify({d,t:S.wxAt})); }catch(_){}
+    S.wxErr=false;
+  }catch(e){ S.wxErr=true; }
+  render(['tiempo','planes']);
+}
+function wxLine(day){ const w=wxFor(wxCity(day),day.d); if(!w) return ''; const [e,t]=WMO(w.code); return `<div class="row small" style="gap:6px;font-weight:600">${e} ${esc(t)} · ${Math.round(w.min)}°/${Math.round(w.max)}° · 💧 ${w.pp==null?'–':w.pp+'%'}${w.wind!=null?' · 💨 '+Math.round(w.wind)+' km/h':''}</div>`; }
+function viewTiempo(){
+  const groups=[['Ámsterdam','var(--ams)','var(--ams-soft)',['2026-11-13','2026-11-14','2026-11-15','2026-11-16','2026-11-17']],['Brujas','var(--bru)','var(--bru-soft)',['2026-11-17','2026-11-18','2026-11-19']],['Gante','var(--bru)','var(--bru-soft)',['2026-11-18']],['Bruselas','var(--bxl)','var(--bxl-soft)',['2026-11-19','2026-11-20','2026-11-21']]];
+  const hora=S.wxAt?new Date(S.wxAt).toLocaleString('es-ES',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):'';
+  return backBar('Tiempo')+`<div class="pad stack-l">
+   <div class="row" style="justify-content:space-between;gap:10px"><div class="small muted">${S.wx?`Actualizado ${esc(hora)}. Datos de Open-Meteo, que usa modelos de los servicios meteorológicos nacionales (no es una web oficial). Se renueva solo cada 30 min.`:(S.wxErr?'No se pudo cargar. ¿Hay conexión?':'Cargando previsión…')}</div><button class="btn ghost sm" data-act="wxrefresh">Actualizar</button></div>
+   ${groups.map(([c,col,soft,ds])=>`<div class="stack" style="gap:8px"><h2 class="h2" style="color:${col}">${c}</h2><div style="display:flex;gap:8px;overflow-x:auto;padding-bottom:4px">${ds.map(d=>{ const w=wxFor(c,d); const dd=new Date(d+'T12:00:00'); const [e,t]=w?WMO(w.code):['',''];
+     return `<div style="flex:none;width:112px;background:${soft};border-radius:18px;padding:12px 10px;display:flex;flex-direction:column;gap:4px;align-items:center;text-align:center"><div class="small" style="font-weight:700;text-transform:uppercase">${DIA[dd.getDay()]} ${dd.getDate()}</div><div style="font-size:30px;line-height:36px">${e||'–'}</div><div class="small">${esc(t)}</div>${w?`<div style="font-family:'Space Grotesk';font-weight:700;font-size:18px">${Math.round(w.max)}° <span class="muted" style="font-weight:500">${Math.round(w.min)}°</span></div><div class="small">💧 ${w.pp==null?'–':w.pp+'%'}${w.mm?' · '+w.mm+' mm':''}</div><div class="small">💨 ${Math.round(w.wind)} km/h</div>`:'<div class="small muted">Sin datos aún</div>'}</div>`; }).join('')}</div></div>`).join('')}</div>`;
+}
 function sheetDoc(){
   openSheet(`${sheetHead('Añadir documento')}
    <label class="f">Título<input class="in" id="d-t" placeholder="Vuelo ida Sevilla → Ámsterdam"></label>
@@ -843,9 +872,9 @@ async function sheetOpenDoc(id){
 document.addEventListener('click', async e=>{
   const el=e.target.closest('[data-act]'); if(!el) return; const a=el.dataset.act;
   if(a==='closesheet'){ if(e.target===el||el.classList.contains('iconbtn')||el.closest('.iconbtn')) closeSheet(); return; }
-  if(a==='tab'){ if(el.dataset.tab!=='comer') S.pick=null; S.tab=el.dataset.tab; S.sub=null; render(); window.scrollTo(0,0); }
+  if(a==='tab'){ if(el.dataset.tab!=='comer') S.pick=null; S.tab=el.dataset.tab; S.sub=null; render(); window.scrollTo(0,0); if(S.tab==='planes') loadWx(); }
   else if(a==='go'){ if(el.dataset.tab==='ruta'){ S.tab='mas'; S.sub='ruta'; } else { S.tab=el.dataset.tab; S.sub=null; } render(); window.scrollTo(0,0); }
-  else if(a==='sub'){ if(el.dataset.sub==='gastos'){ S.tab='gastos'; S.sub=null; } else { S.sub=el.dataset.sub; } render(); window.scrollTo(0,0); }
+  else if(a==='sub'){ if(el.dataset.sub==='gastos'){ S.tab='gastos'; S.sub=null; } else { S.sub=el.dataset.sub; } render(); window.scrollTo(0,0); if(S.sub==='tiempo') loadWx(); }
   else if(a==='back'){ S.sub=null; S.tab='mas'; render(); window.scrollTo(0,0); }
   else if(a==='city'){ S.city=el.dataset.v; render(); }
   else if(a==='meal'){ S.meal=el.dataset.v; render(); }
@@ -864,6 +893,7 @@ document.addEventListener('click', async e=>{
   else if(a==='editplan'){ const p=S.planes.find(x=>x.id===el.dataset.id); if(p) sheetPlan(p.dia,p); }
   else if(a==='edithotel') sheetHotel();
   else if(a==='adddoc') sheetDoc();
+  else if(a==='wxrefresh') loadWx(true);
   else if(a==='mapall') openMapAll();
   else if(a==='mapclose'){ const o=$('#mapov'); if(o) o.remove(); }
   else if(a==='addfoto') pickFotos(!!el.dataset.g);
@@ -880,6 +910,7 @@ window.addEventListener('online',()=>render()); window.addEventListener('offline
 (function(){ const p=new URLSearchParams(location.search); const c=p.get('c'); if(c&&c.length>=8){ S.code=c; store.set('viaje.code',c); history.replaceState(null,'',location.pathname); } })();
 render();
 initFB();
+loadWx();
 if('serviceWorker' in navigator){ window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{})); }
 </script>
 </body>
