@@ -453,13 +453,18 @@ function viewPlanes(){
     if(r.kind==='plan'){ const p=r.p; const dc=p.archivoId&&S.archivos.find(a=>a.id===p.archivoId);
       return `<div class="trow" data-k="plan:${p.id}"><div class="th">${p.hora?esc(p.hora):'<span class="muted">—</span>'}</div><div class="tdot"></div><button class="tcard" data-act="editplan" data-id="${p.id}"><span class="tt">${esc(p.texto)}</span><span class="wrap">${dc?`<span data-act="opendoc" data-id="${dc.id}" class="tdoc">${ic('file',16)} Ver entrada</span>`:''}${p.enlace?`<span data-act="openlink" data-u="${esc(p.enlace)}" class="tdoc" style="background:var(--ams-soft);color:var(--ams-ink)">${ic('out',16)} Abrir enlace</span>`:''}</span></button><span class="grip" aria-label="Mover" title="Arrastra para ordenar">⋮⋮</span></div>`; }
     const l=r.l; return `<div class="trow" data-k="lug:${l.id}"><div class="th"><span class="muted">${ic('eat',18)}</span></div><div class="tdot"></div><button class="tcard" data-act="editlugar" data-id="${l.id}"><span class="tt">${esc(l.nombre)}</span><span class="small muted">${esc(l.comida)} · ${esc(l.ciudad)}</span></button><span class="grip" aria-label="Mover" title="Arrastra para ordenar">⋮⋮</span></div>`; };
+  const cityQ=sel.city==='Vuelos'?'':sel.city;
+  const stops=rows.map(r=>r.kind==='plan'?String(r.p.texto||'').replace(/^(comer|cenar|desayunar|almorzar)( en)?\s+/i,'').trim()+(cityQ?', '+cityQ:''):r.l.nombre+', '+(r.l.ciudad||cityQ)).filter(x=>x.length>2).slice(0,10);
+  let rutaUrl='';
+  if(stops.length===1) rutaUrl='https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(stops[0]);
+  else if(stops.length>1) rutaUrl='https://www.google.com/maps/dir/?api=1&travelmode=walking&origin='+encodeURIComponent(stops[0])+'&destination='+encodeURIComponent(stops[stops.length-1])+(stops.length>2?'&waypoints='+encodeURIComponent(stops.slice(1,-1).join('|')):'');
   return `<div class="stack-l" style="padding-top:20px"><div class="stack" style="gap:4px;padding:0 20px"><h1 style="font-size:30px">Planes</h1><div class="muted">Elige un día para ver todo lo que hacéis. Lo que añade uno lo ve el otro.</div></div>
   <div class="dstrip">${strip}</div>
   <div style="padding:0 20px" class="stack">
    <div class="dhero" style="--c:${sel.c}"><div class="small" style="font-weight:700;text-transform:uppercase;letter-spacing:.6px">${DIAL[dd.getDay()]} ${dd.getDate()} ${MES[dd.getMonth()]} · ${esc(sel.city)}</div>
      <div style="font-family:'Space Grotesk';font-size:24px;line-height:30px;font-weight:700">${esc(sel.title)}</div>
      ${sel.sleep?`<div class="row small" style="gap:6px">${ic('bed',16)} Dormís en ${esc(sel.sleep)}</div>`:''}
-     ${info.map(l=>`<div class="small" style="opacity:.85">${esc(l)}</div>`).join('')}</div>
+     ${info.map(l=>`<div class="small" style="opacity:.85">${esc(l)}</div>`).join('')}${rutaUrl?`<button class="btn sm" data-act="openlink" data-u="${esc(rutaUrl)}" style="background:#fff;color:var(--ink);align-self:flex-start">${ic('route',18)} Ver ruta (${stops.length} parada${stops.length===1?'':'s'})</button>`:''}</div>
    <button class="btn ams" data-act="addchoose" data-d="${sel.d}">${ic('plus')} Añadir al día</button>
    ${rows.length?`<div class="tline">${rows.map(row).join('')}</div>`:`<div class="empty"><div style="font-weight:700;color:var(--ink);margin-bottom:4px">Día libre</div>Nada fijado todavía. Añade un plan o un restaurante con el botón de arriba, o con el + desde la pestaña Comer.</div>`}
   </div></div>`;
