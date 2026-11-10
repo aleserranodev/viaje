@@ -250,10 +250,10 @@ const DAYS = [
  {d:'2026-11-14', city:'Ámsterdam', c:'var(--ams)', title:'Ámsterdam', lines:['Sin planes todavía'], sleep:'Ámsterdam · The Red Ox'},
  {d:'2026-11-15', city:'Ámsterdam', c:'var(--ams)', title:'Casa de Ana Frank', lines:['Entradas compradas (33 €). Hora por añadir.'], sleep:'Ámsterdam · The Red Ox'},
  {d:'2026-11-16', city:'Ámsterdam', c:'var(--ams)', title:'Ámsterdam', lines:['Sin planes todavía'], sleep:'Ámsterdam · The Red Ox'},
- {d:'2026-11-17', city:'Brujas', c:'var(--bru)', title:'Tren Ámsterdam → Brujas', lines:['Unas 3 h con un cambio; llegada hacia mediodía','Hostel 28: a 13–15 min andando de la estación, sin ascensor'], sleep:'Brujas · Hostel 28'},
- {d:'2026-11-18', city:'Gante', c:'var(--bru)', title:'Excursión de un día a Gante', lines:['Tren de 25–30 min; maletas en Brujas y vuelta a dormir allí'], sleep:'Brujas · Hostel 28'},
- {d:'2026-11-19', city:'Bruselas', c:'var(--bxl)', title:'Tren Brujas → Bruselas', lines:['Por la tarde; entre 1 h y 1 h 15 min'], sleep:'Bruselas · hotel'},
- {d:'2026-11-20', city:'Bruselas', c:'var(--bxl)', title:'Día completo en Bruselas', lines:['Sin planes todavía'], sleep:'Bruselas · hotel'},
+ {d:'2026-11-17', city:'Brujas', c:'var(--bru)', title:'Tren Ámsterdam → Brujas', lines:['Unas 3 h con un cambio; llegada hacia mediodía'], sleep:'Brujas · Hotel du Théâtre'},
+ {d:'2026-11-18', city:'Gante', c:'var(--bru)', title:'Excursión de un día a Gante', lines:['Tren de 25–30 min; maletas en Brujas y vuelta a dormir allí'], sleep:'Brujas · Hotel du Théâtre'},
+ {d:'2026-11-19', city:'Bruselas', c:'var(--bxl)', title:'Tren Brujas → Bruselas', lines:['Por la tarde; entre 1 h y 1 h 15 min'], sleep:'Bruselas · Bedford Hotel'},
+ {d:'2026-11-20', city:'Bruselas', c:'var(--bxl)', title:'Día completo en Bruselas', lines:['Sin planes todavía'], sleep:'Bruselas · Bedford Hotel'},
  {d:'2026-11-21', city:'Vuelos', c:'var(--fly)', title:'Vuelo Bruselas → Sevilla', lines:[], pend:['aeropuerto-vuelta'], sleep:''}
 ];
 const PEND = {
@@ -263,8 +263,8 @@ const PEND = {
 };
 const HOTELES = [
  {id:'ams', city:'Ámsterdam', c:'var(--ams)', soft:'var(--ams-soft)', ink:'var(--ams-ink)', name:'The Red Ox – Super Central Canal View Rooms', addr:'Singel 89', q:'The Red Ox Singel 89 Amsterdam', fechas:'13 – 17 nov · 4 noches', notes:[], pend:['checkin-redox'], img:'amsterdam'},
- {id:'bru', city:'Brujas', c:'var(--bru)', soft:'var(--bru-soft)', ink:'var(--bru-ink)', name:'Hostel 28', addr:'Dweerstraat 28', q:'Hostel 28 Dweerstraat 28 Brugge', fechas:'17 – 19 nov · 2 noches', notes:['A 13–15 min andando de la estación','Sin ascensor: ojo con las maletas'], pend:[], img:'brujas'},
- {id:'bxl', city:'Bruselas', c:'var(--bxl)', soft:'var(--bxl-soft)', ink:'var(--bxl-ink)', name:'', addr:'', q:'', fechas:'19 – 21 nov · 2 noches', notes:[], pend:[], img:'bruselas', editable:true}
+ {id:'bru', city:'Brujas', c:'var(--bru)', soft:'var(--bru-soft)', ink:'var(--bru-ink)', name:'Hotel du Théâtre', addr:'Kuipersstraat 18', q:'Hotel du Théâtre Kuipersstraat 18 Brugge', fechas:'17 – 19 nov · 2 noches', notes:[], pend:[], img:'brujas'},
+ {id:'bxl', city:'Bruselas', c:'var(--bxl)', soft:'var(--bxl-soft)', ink:'var(--bxl-ink)', name:'Bedford Hotel & Congress Centre', addr:'Rue du Midi 135', q:'Bedford Hotel & Congress Centre Rue du Midi 135 Bruxelles', fechas:'19 – 21 nov · 2 noches', notes:[], pend:[], img:'bruselas'}
 ];
 const DESC = {
  'Greenwoods Singel':'Clásico desde 1988: desayuno inglés, eggs Benedict y opciones vegetarianas, con terraza sobre el canal.',
@@ -291,7 +291,7 @@ function viewInicio(){
   const dd=new Date(day.d+'T12:00:00'); const dl=`${DIAL[dd.getDay()]} ${dd.getDate()} ${MES[dd.getMonth()]}`;
   const isFly = day.city==='Vuelos';
   const label = before>=0 || t<day.d ? 'Lo siguiente' : 'Hoy';
-  const pendKeys = Object.keys(PEND).filter(k=>!S.marcas['pend:'+k]);
+  const pendKeys = [];
   const bruName = S.config.hotel_bruselas?.nombre;
   const city = (img,col,name,dates,detail,pos='center')=>`<div class="cityrow"><div class="im"><img src="./fotos/ciudades/city_${img}.jpg" alt="" style="object-position:${pos}"></div><div style="padding:12px 14px;display:flex;flex-direction:column;gap:4px;min-width:0"><div class="row" style="gap:8px"><span class="dot" style="background:${col}"></span><h3 style="font-size:19px;line-height:24px">${name}</h3></div><div style="font-size:14px;font-weight:600">${dates}</div><div class="small muted">${detail}</div></div></div>`;
   return `
@@ -307,9 +307,9 @@ function viewInicio(){
       </div></div>
     <div class="stack" style="gap:10px"><h2 class="h2">Tu viaje</h2>
       ${city('amsterdam','var(--ams)','Ámsterdam','Vie 13 – mar 17 · 4 noches','The Red Ox · Singel 89','center 30%')}
-      ${city('brujas','var(--bru)','Brujas','Mar 17 – jue 19 · 2 noches','Hostel 28 · Dweerstraat 28')}
+      ${city('brujas','var(--bru)','Brujas','Mar 17 – jue 19 · 2 noches','Hotel du Théâtre · Kuipersstraat 18')}
       ${city('gante','var(--bru)','Gante','Mié 18 · excursión de un día','Vuelta a dormir a Brujas')}
-      ${city('bruselas','var(--bxl)','Bruselas','Jue 19 – sáb 21 · 2 noches', bruName?esc(bruName):'Hotel · nombre por añadir')}
+      ${city('bruselas','var(--bxl)','Bruselas','Jue 19 – sáb 21 · 2 noches', 'Bedford Hotel · Rue du Midi 135')}
     </div>
     <div class="stack" style="gap:10px"><h2 class="h2">Todo en un sitio</h2>
       <div class="row" style="gap:10px;align-items:stretch">
@@ -327,7 +327,7 @@ function viewRuta(){
     return `<div class="daycard ${x.d===t?'today':''}" style="--c:${x.c}"><div class="row" style="justify-content:space-between"><div class="small" style="font-weight:700;text-transform:uppercase;letter-spacing:.5px">${DIA[dd.getDay()]} ${dd.getDate()} ${MES[dd.getMonth()]}</div><span class="chip" style="background:#fff;border:1px solid var(--line)"><span class="dot" style="background:${x.c}"></span>${x.city}</span></div>
       <div style="font-family:'Space Grotesk';font-size:19px;font-weight:700">${esc(x.title)}</div>
       ${x.lines.map(l=>`<div class="muted small">${esc(l)}</div>`).join('')}
-      ${x.pend&&x.pend.length?`<div style="background:var(--warn-bg);border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:10px">${pendHtml(x.pend)}</div>`:''}
+      
       ${x.sleep?`<div class="row small muted" style="gap:6px">${ic('bed',16)} Dormís en ${esc(x.sleep)}</div>`:''}</div>`; }).join('')}</div></div>`;
 }
 function viewComer(){
@@ -416,7 +416,7 @@ function viewHoteles(){
     return `<div class="card"><div style="height:120px;position:relative"><img src="./fotos/ciudades/city_${h.img}.jpg" alt="" style="width:100%;height:100%;object-fit:cover;display:block"><span class="badge" style="color:${h.ink};background:${h.soft}">${h.city}</span></div>
     <div class="card-p stack" style="gap:10px"><div><h2 style="font-size:20px;line-height:26px">${name?esc(name):'Nombre por añadir'}</h2>${addr?`<div class="row small muted" style="gap:6px;margin-top:2px">${ic('pin',16)}${esc(addr)}</div>`:''}</div>
     <div class="wrap"><span class="chip price" style="background:${h.soft};color:${h.ink}">${h.fechas}</span>${h.notes.map(n=>`<span class="chip">${esc(n)}</span>`).join('')}</div>
-    ${h.pend.length?`<div style="background:var(--warn-bg);border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:10px">${pendHtml(h.pend)}</div>`:''}
+    
     <div class="row" style="gap:8px">${q?`<a class="btn ams" href="${mapsUrl(q)}" target="_blank" rel="noopener" style="flex:1">Abrir en Google Maps ${ic('out',18,2)}</a>`:''}${h.editable?`<button class="btn ghost" data-act="edithotel" style="${q?'width:auto':'flex:1'}">${name?'Editar':'Añadir datos del hotel'}</button>`:''}</div>
     </div></div>`; }).join('')}</div>`;
 }
