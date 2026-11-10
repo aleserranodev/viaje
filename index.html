@@ -336,18 +336,18 @@ function viewInicio(){
         ${day.lines.length?`<div class="wrap">${day.lines.map(l=>`<span class="chip" style="background:#fff">${esc(l)}</span>`).join('')}</div>`:''}
         <button class="btn ${isFly?'fly':'ghost'}" data-act="go" data-tab="ruta">Ver la ruta completa</button>
       </div></div>
-    <div class="stack" style="gap:10px"><h2 class="h2">Tu viaje</h2>
-      ${city('amsterdam','var(--ams)','Ámsterdam','Vie 13 – mar 17 · 4 noches','The Red Ox · Singel 89','center 30%')}
-      ${city('brujas','var(--bru)','Brujas','Mar 17 – jue 19 · 2 noches','Hotel du Théâtre · Kuipersstraat 18')}
-      ${city('gante','var(--bru)','Gante','Mié 18 · excursión de un día','Vuelta a dormir a Brujas')}
-      ${city('bruselas','var(--bxl)','Bruselas','Jue 19 – sáb 21 · 2 noches', 'Bedford Hotel · Rue du Midi 135')}
-    </div>
     <div class="stack" style="gap:10px"><h2 class="h2">Todo en un sitio</h2>
       <div class="row" style="gap:10px;align-items:stretch">
         <button class="tile" style="background:var(--ams-soft);color:var(--ams-ink)" data-act="sub" data-sub="hoteles"><span class="o">${ic('bed')}</span><span><span style="display:block;font-family:'Space Grotesk';font-size:17px;font-weight:700">Hoteles</span><span class="small" style="font-weight:500">3 alojamientos</span></span></button>
         <button class="tile" style="background:var(--fly-soft);color:var(--fly-ink)" data-act="sub" data-sub="docs"><span class="o">${ic('doc')}</span><span><span style="display:block;font-family:'Space Grotesk';font-size:17px;font-weight:700">Documentos</span><span class="small" style="font-weight:500">${S.archivos.length?S.archivos.length+' guardados':'Billetes y entradas'}</span></span></button>
         <button class="tile" style="background:var(--bru-soft);color:var(--bru-ink)" data-act="sub" data-sub="gastos"><span class="o">${ic('wallet')}</span><span><span style="display:block;font-family:'Space Grotesk';font-size:17px;font-weight:700">Gastos</span><span class="small" style="font-weight:500">${eur(half(totalGastos()))} por persona</span></span></button>
       </div></div>
+    <div class="stack" style="gap:10px"><h2 class="h2">Tu viaje</h2>
+      ${city('amsterdam','var(--ams)','Ámsterdam','Vie 13 – mar 17 · 4 noches','The Red Ox · Singel 89','center 30%')}
+      ${city('brujas','var(--bru)','Brujas','Mar 17 – jue 19 · 2 noches','Hotel du Théâtre · Kuipersstraat 18')}
+      ${city('gante','var(--bru)','Gante','Mié 18 · excursión de un día','Vuelta a dormir a Brujas')}
+      ${city('bruselas','var(--bxl)','Bruselas','Jue 19 – sáb 21 · 2 noches', 'Bedford Hotel · Rue du Midi 135')}
+    </div>
     ${pendKeys.length?`<div style="background:var(--warn-bg);border:1px solid var(--warn-line);border-radius:20px;padding:16px;display:flex;flex-direction:column;gap:14px"><div class="row" style="color:var(--warn-ink)">${ic('warn')}<h2 style="font-size:18px;line-height:24px">Por confirmar</h2></div>${pendHtml(pendKeys)}</div>`:''}
   </div>`;
 }
@@ -777,10 +777,11 @@ async function openMapAll(){
     const m=L.marker(ll,{icon:L.divIcon({className:'',html:`<div style="background:${col};color:#fff;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4);width:28px;height:28px;border-radius:14px;display:flex;align-items:center;justify-content:center;font:700 13px Space Grotesk,sans-serif">${i+1}</div>`,iconSize:[28,28],iconAnchor:[14,14]})}).addTo(map);
     m.bindPopup(`<b>${esc(it.n)}</b><br><span style="font-size:12px">${esc(it.a)}</span><br><a href="${esc(g)}" target="_blank" rel="noopener">Abrir en Google Maps</a> · <a href="${esc(d)}" target="_blank" rel="noopener">Cómo llegar</a>`);
     pts.push(ll); map.fitBounds(L.latLngBounds(pts).pad(.15),{maxZoom:16}); };
-  const nom=async q=>{ const r=await fetch('https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&countrycodes=nl,be&q='+encodeURIComponent(q)).then(x=>x.json()); return r[0]?[+r[0].lat,+r[0].lon]:null; };
+  const BB={'Ámsterdam':[4.72,52.28,5.08,52.45],'Brujas':[3.12,51.17,3.32,51.25],'Gante':[3.62,50.99,3.84,51.12],'Bruselas':[4.25,50.77,4.50,50.93]}[city]||[2,50,7,53];
+  const nom=async q=>{ const r=await fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&limit=3&bounded=1&viewbox=${BB[0]},${BB[3]},${BB[2]},${BB[1]}&q=`+encodeURIComponent(q)).then(x=>x.json()); const x=r.find(z=>+z.lon>=BB[0]&&+z.lon<=BB[2]&&+z.lat>=BB[1]&&+z.lat<=BB[3]); return x?[+x.lat,+x.lon]:null; };
   let saved=false;
   for(let i=0;i<items.length;i++){
-    if(!$('#mapov')) return; const it=items[i]; const key=hashQ([it.n,it.a,it.c].join('|')); let ll=geo[key];
+    if(!$('#mapov')) return; const it=items[i]; const key=hashQ('v2|'+[it.n,it.a,it.c].join('|')); let ll=geo[key];
     if(!ll){ try{ ll=it.a?await nom(it.a+', '+it.c):null; await new Promise(r=>setTimeout(r,1100)); if(!ll){ ll=await nom(it.n+', '+it.c); await new Promise(r=>setTimeout(r,1100)); } }catch(e){ ll=null; }
       if(ll){ geo[key]=ll; saved=true; try{ localStorage.setItem('viaje.geo',JSON.stringify(geo)); }catch(_){} if(S.dbReady) F.setDoc(docRef('config','geo'),{[key]:ll},{merge:true}).catch(()=>{}); } }
     done++; if(ll) add(it,ll,i); else miss++; upd();
