@@ -253,7 +253,7 @@ const DAYS = [
  {d:'2026-11-17', city:'Brujas', c:'var(--bru)', title:'Tren Ámsterdam → Brujas', lines:['Unas 3 h con un cambio; llegada hacia mediodía'], sleep:'Brujas · Hotel du Théâtre'},
  {d:'2026-11-18', city:'Gante', c:'var(--bru)', title:'Excursión de un día a Gante', lines:['Tren de 25–30 min; maletas en Brujas y vuelta a dormir allí'], sleep:'Brujas · Hotel du Théâtre'},
  {d:'2026-11-19', city:'Bruselas', c:'var(--bxl)', title:'Tren Brujas → Bruselas', lines:['Por la tarde; entre 1 h y 1 h 15 min'], sleep:'Bruselas · Bedford Hotel'},
- {d:'2026-11-20', city:'Bruselas', c:'var(--bxl)', title:'Día completo en Bruselas', lines:['Sin planes todavía'], sleep:'Bruselas · Bedford Hotel'},
+ {d:'2026-11-20', city:'Bruselas', c:'var(--bxl)', title:'Día completo en Bruselas', lines:['12:30 · Parlamento Europeo (hemiciclo), con DNI/pasaporte físico'], sleep:'Bruselas · Bedford Hotel'},
  {d:'2026-11-21', city:'Vuelos', c:'var(--fly)', title:'Vuelo Bruselas → Sevilla', lines:[], pend:['aeropuerto-vuelta'], sleep:''}
 ];
 const PEND = {
@@ -393,7 +393,7 @@ function viewPlanes(){
     const fixed = x.d==='2026-11-15' ? ['Casa de Ana Frank: entradas compradas (hora por añadir)'] : (x.d==='2026-11-18'?['Gante en tren (25–30 min)']:[]);
     return `<div class="daycard" style="--c:${x.c}"><div class="row" style="justify-content:space-between"><div class="small" style="font-weight:700;text-transform:uppercase;letter-spacing:.5px">${DIA[dd.getDay()]} ${dd.getDate()} ${MES[dd.getMonth()]} · ${x.city}</div><button class="iconbtn" style="width:44px;height:44px" data-act="addchoose" data-d="${x.d}" aria-label="Añadir">${ic('plus')}</button></div>
     ${fixed.map(f=>`<div style="font-size:15px;font-weight:600">${esc(f)}</div>`).join('')}
-    ${mine.map(p=>`<button class="check" data-act="editplan" data-id="${p.id}" style="align-items:center"><span class="stack" style="gap:0;flex:1"><span style="font-size:15px;font-weight:600">${p.hora?esc(p.hora)+' · ':''}${esc(p.texto)}</span></span><span class="muted small">Editar</span></button>`).join('')}
+    ${mine.map(p=>`<button class="check" data-act="editplan" data-id="${p.id}" style="align-items:center"><span class="stack" style="gap:0;flex:1"><span style="font-size:15px;font-weight:600">${p.hora?esc(p.hora)+' · ':''}${esc(p.texto)}</span>${(()=>{const dc=p.archivoId&&S.archivos.find(a=>a.id===p.archivoId); return dc?`<span data-act="opendoc" data-id="${dc.id}" style="align-self:flex-start;margin-top:6px;display:inline-flex;gap:6px;align-items:center;padding:6px 12px;border-radius:999px;background:var(--fly-soft);color:var(--fly-ink);font-size:13px;font-weight:700">${ic('file',16)} Ver entrada</span>`:''})()}</span><span class="muted small">Editar</span></button>`).join('')}
     ${lug.map(l=>`<button class="check" data-act="editlugar" data-id="${l.id}" style="align-items:center"><span style="color:var(--ams)">${ic('eat',20)}</span><span class="stack" style="gap:0;flex:1"><span style="font-size:15px;font-weight:600">${esc(l.nombre)}</span><span class="small muted">${esc(l.comida)} · ${esc(l.ciudad)}</span></span><span class="muted small">Editar</span></button>`).join('')}
     ${!fixed.length&&!mine.length&&!lug.length?'<div class="small muted">Sin planes todavía</div>':''}</div>`; }).join('')}</div></div>`;
 }
@@ -533,10 +533,11 @@ function sheetPlan(dia0,p){
   openSheet(`${sheetHead(nuevo?'Añadir plan':'Editar plan')}${dia?`<div class="small muted">${fmtFecha(dia)}</div>`:`<label class="f">Día<select class="in" id="p-dia">${DAYS.map(x=>{const dd=new Date(x.d+'T12:00:00'); const def=(todayStr()>=TRIP_START&&todayStr()<=TRIP_END)?todayStr():TRIP_START; return `<option value="${x.d}" ${x.d===def?'selected':''}>${DIAL[dd.getDay()]} ${dd.getDate()} ${MES[dd.getMonth()]} · ${x.city}</option>`}).join('')}</select></label>`}
    <label class="f">Hora (opcional)<input class="in" id="p-h" type="time" value="${esc(p.hora)}"></label>
    <label class="f">Plan<textarea class="in" id="p-t" placeholder="Qué vais a hacer, dónde, si hay que reservar…">${esc(p.texto)}</textarea></label>
+   <label class="f">Documento ligado (opcional)<select class="in" id="p-a"><option value="">Ninguno</option>${S.archivos.map(a=>`<option value="${a.id}" ${a.id===p.archivoId?'selected':''}>${esc(a.titulo)}</option>`).join('')}</select></label>
    <button class="btn ams" id="p-ok">Guardar</button>${nuevo?'':`<button class="btn danger" id="p-del">${ic('trash',18)} Borrar plan</button>`}`);
   $('#p-ok').onclick=async()=>{ const t=$('#p-t').value.trim(); if(!t){ toast('Escribe el plan.'); return; }
     const dia=(arguments0.d||($('#p-dia')&&$('#p-dia').value)||'');
-    const ok=await dbDo(()=> nuevo ? F.addDoc(colRef('planes'),{dia,hora:$('#p-h').value,texto:t,creado:Date.now()}) : F.setDoc(docRef('planes',p.id),{dia:p.dia||dia,hora:$('#p-h').value,texto:t,creado:p.creado||Date.now()}));
+    const ok=await dbDo(()=> nuevo ? F.addDoc(colRef('planes'),{dia,hora:$('#p-h').value,texto:t,archivoId:$('#p-a').value,creado:Date.now()}) : F.setDoc(docRef('planes',p.id),{dia:p.dia||dia,hora:$('#p-h').value,texto:t,archivoId:$('#p-a').value,creado:p.creado||Date.now()}));
     if(ok) closeSheet(); };
   if(!nuevo) $('#p-del').onclick=async()=>{ const ok=await dbDo(()=>F.deleteDoc(docRef('planes',p.id))); if(ok) closeSheet(); };
 }
@@ -635,7 +636,7 @@ async function shrinkImage(file, maxBytes=MAXB, maxDim=1800){
 }
 async function sheetOpenDoc(id){
   const a=S.archivos.find(x=>x.id===id); if(!a) return;
-  openSheet(`${sheetHead(esc(a.titulo))}<div class="small muted">${esc(a.cat)}${a.link?'':' · '+esc(a.nombre||'')}</div><div id="d-body" class="stack"><div class="empty">Cargando…</div></div><button class="btn danger" id="d-del">${ic('trash',18)} Borrar documento</button>`);
+  openSheet(`${sheetHead(esc(a.titulo))}<div class="small muted">${esc(a.cat)}${a.link?'':' · '+esc(a.nombre||'')}</div>${S.planes.filter(p=>p.archivoId===id).map(p=>`<div class="small" style="font-weight:600">Plan: ${esc(fmtFecha(p.dia))}${p.hora?' · '+esc(p.hora):''} · ${esc(p.texto)}</div>`).join('')}<div id="d-body" class="stack"><div class="empty">Cargando…</div></div><button class="btn danger" id="d-del">${ic('trash',18)} Borrar documento</button>`);
   $('#d-del').onclick=async()=>{ if(!confirm('¿Borrar este documento?')) return; const ok=await dbDo(async()=>{ await F.deleteDoc(docRef('archivos',id)); if(!a.link) await F.deleteDoc(docRef('blobs',id)); }); if(ok) closeSheet(); };
   if(a.link){ $('#d-body').innerHTML=`<a class="btn fly" href="${esc(a.link)}" target="_blank" rel="noopener">Abrir enlace ${ic('out',18,2)}</a>`; return; }
   try{
