@@ -112,7 +112,7 @@ h1,h2,h3{margin:0;font-family:'Space Grotesk','Inter',sans-serif;letter-spacing:
 .trow .tdot::after{content:"";position:absolute;left:1px;top:18px;width:12px;height:12px;border-radius:6px;background:var(--ams);border:2px solid #fff;box-shadow:0 0 0 1px #E3D6C6}
 .trow:first-child .tdot::before{top:24px}.trow:last-child .tdot::before{bottom:calc(100% - 24px)}
 .tcard{display:flex;flex-direction:column;gap:4px;align-items:flex-start;text-align:left;margin:5px 0;padding:12px 14px;border-radius:16px;background:#fff;border:1px solid var(--line);font-family:inherit;cursor:pointer;width:100%}
-.tcard .tt{font-size:15px;font-weight:600;color:#1F1B16}
+.tcard .tt{font-size:15px;font-weight:600;color:#1F1B16;white-space:pre-line;overflow-wrap:anywhere}
 .grip{touch-action:none;display:flex;align-items:center;justify-content:center;color:#A39484;font-size:20px;letter-spacing:-3px;cursor:grab;user-select:none;-webkit-user-select:none;writing-mode:vertical-rl}
 .trow.dragging{opacity:.92;filter:drop-shadow(0 8px 14px rgba(0,0,0,.2));position:relative}
 .trow.dropbefore .tcard{box-shadow:0 -4px 0 -1px var(--ams)}
@@ -447,7 +447,7 @@ function lugarCard(l){
       <div><h2 style="font-size:22px;line-height:28px">${esc(l.nombre)}</h2>${gr(l.nombre,l)}
         ${l.direccion?`<div class="row small muted" style="gap:6px;align-items:flex-start;margin-top:2px"><span style="margin-top:1px">${ic('pin',16)}</span><span>${esc(l.direccion)}</span></div>`:''}</div>
       <div class="wrap">${l.minutos?`<span class="chip walk">${ic('walk',14,2)}≈ ${esc(l.minutos)} min andando del hotel</span>`:''}${l.precio?`<span class="chip price">${esc(l.precio)}</span>`:''}${l.horario?`<span class="chip">${esc(l.horario)}</span>`:''}${l.reserva?`<span class="chip">${esc(l.reserva)}</span>`:''}${l.dia?`<span class="chip warn">${fmtFecha(l.dia)}</span>`:''}</div>
-      ${l.desc?`<p style="margin:0;font-size:14px;line-height:21px;color:#3D352C">${esc(l.desc)}</p>`:''}
+      ${l.desc?`<p style="margin:0;white-space:pre-line;font-size:14px;line-height:21px;color:#3D352C">${esc(l.desc)}</p>`:''}
       <div class="row" style="gap:8px">
         <a class="btn ams" href="${esc(maps)}" target="_blank" rel="noopener" style="flex:1">Abrir en Google Maps ${ic('out',18,2)}</a>
         <button class="iconbtn" data-act="plusrest" data-n="${esc(l.nombre)}" data-c="${esc(l.ciudad||'')}" aria-label="Añadir a un plan" style="width:48px;height:48px">${ic('plus')}</button>
