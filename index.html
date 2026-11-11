@@ -112,6 +112,7 @@ h1,h2,h3{margin:0;font-family:'Space Grotesk','Inter',sans-serif;letter-spacing:
 .trow .tdot::after{content:"";position:absolute;left:1px;top:18px;width:12px;height:12px;border-radius:6px;background:var(--ams);border:2px solid #fff;box-shadow:0 0 0 1px #E3D6C6}
 .trow:first-child .tdot::before{top:24px}.trow:last-child .tdot::before{bottom:calc(100% - 24px)}
 .tcard{display:flex;flex-direction:column;gap:4px;align-items:flex-start;text-align:left;margin:5px 0;padding:12px 14px;border-radius:16px;background:#fff;border:1px solid var(--line);font-family:inherit;cursor:pointer;width:100%}
+.tcard .td{display:block;font-size:13px;font-weight:400;color:#8A7D6E;line-height:19px;white-space:pre-line;overflow-wrap:anywhere;margin-top:2px}
 .tcard .tt{font-size:15px;font-weight:600;color:#1F1B16;white-space:pre-line;overflow-wrap:anywhere}
 .grip{touch-action:none;display:flex;align-items:center;justify-content:center;color:#A39484;font-size:20px;letter-spacing:-3px;cursor:grab;user-select:none;-webkit-user-select:none;writing-mode:vertical-rl}
 .trow.dragging{opacity:.92;filter:drop-shadow(0 8px 14px rgba(0,0,0,.2));position:relative}
@@ -470,14 +471,14 @@ function viewPlanes(){
   const info=(sel.lines||[]).filter(l=>!/^Sin planes/i.test(l));
   const row=r=>{
     if(r.kind==='plan'){ const p=r.p; const dc=p.archivoId&&S.archivos.find(a=>a.id===p.archivoId);
-      return `<div class="trow" data-k="plan:${p.id}"><div class="th">${p.hora?esc(p.hora):'<span class="muted">—</span>'}</div><div class="tdot"></div><button class="tcard" data-act="editplan" data-id="${p.id}"><span class="tt">${esc(p.texto)}</span><span class="wrap">${dc?`<span data-act="opendoc" data-id="${dc.id}" class="tdoc">${ic('file',16)} Ver entrada</span>`:''}${p.enlace?`<span data-act="openlink" data-u="${esc(p.enlace)}" class="tdoc" style="background:var(--ams-soft);color:var(--ams-ink)">${ic('out',16)} Abrir enlace</span>`:''}</span></button><span class="grip" aria-label="Mover" title="Arrastra para ordenar">⋮⋮</span></div>`; }
+      return `<div class="trow" data-k="plan:${p.id}"><div class="th">${p.hora?esc(p.hora):'<span class="muted">—</span>'}</div><div class="tdot"></div><button class="tcard" data-act="editplan" data-id="${p.id}"><span class="tt">${esc(planParts(p).t)}</span>${planParts(p).d?`<span class="td">${esc(planParts(p).d)}</span>`:''}<span class="wrap">${dc?`<span data-act="opendoc" data-id="${dc.id}" class="tdoc">${ic('file',16)} Ver entrada</span>`:''}${(p.web||p.enlace)?`<span data-act="openlink" data-u="${esc(p.web||p.enlace)}" class="tdoc" style="background:var(--ams-soft);color:var(--ams-ink)">${ic('out',16)} Ver web</span>`:''}${p.ubicacion?`<span data-act="openlink" data-u="${esc(p.ubicacion)}" class="tdoc" style="background:var(--bru-soft);color:var(--bru-ink)">${ic('pin',16)} Ver ubicación</span>`:''}</span></button><span class="grip" aria-label="Mover" title="Arrastra para ordenar">⋮⋮</span></div>`; }
     const l=r.l; return `<div class="trow" data-k="lug:${l.id}"><div class="th"><span class="muted">${ic('eat',18)}</span></div><div class="tdot"></div><button class="tcard" data-act="editlugar" data-id="${l.id}"><span class="tt">${esc(l.nombre)}</span><span class="small muted">${esc(l.comida)} · ${esc(l.ciudad)}</span></button><span class="grip" aria-label="Mover" title="Arrastra para ordenar">⋮⋮</span></div>`; };
   const cityQ=sel.city==='Vuelos'?'':sel.city;
   const KNOWN=[[/ana frank/i,'Casa de Ana Frank, Prinsengracht 263-267, Amsterdam'],[/parlamento europeo/i,'Parlamento Europeo, Rue Wiertz 60, Bruxelles']];
   const WXH=wxHero(sel);
   const stops=rows.map(r=>{ if(r.kind==='lug') return r.l.nombre+', '+(r.l.ciudad||cityQ);
-    const p=r.p; if(p.lugar) return /^-?\d+\.\d+,-?\d+\.\d+$/.test(p.lugar)?p.lugar:p.lugar+(cityQ?', '+cityQ:''); const k=KNOWN.find(x=>x[0].test(p.texto||'')); if(k) return k[1];
-    const t=String(p.texto||''); if(t.length>45) return ''; const q=t.replace(/^(comer|cenar|desayunar|almorzar)( en)?\s+/i,'').trim(); return q?q+(cityQ?', '+cityQ:''):''; }).filter(x=>x.length>2).slice(0,8);
+    const p=r.p; const ub=p.ubicacion||''; const ubn=(ub.match(/\/maps\/place\/([^/@?]+)/)||[])[1]; const ubl=ub.match(/!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/)||ub.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/); if(ubl) return ubl[1]+','+ubl[2]; if(ubn){ try{ return decodeURIComponent(ubn.replace(/\+/g,' '))+(cityQ?', '+cityQ:''); }catch(_){} } if(p.lugar) return /^-?\d+\.\d+,-?\d+\.\d+$/.test(p.lugar)?p.lugar:p.lugar+(cityQ?', '+cityQ:''); const k=KNOWN.find(x=>x[0].test(p.texto||'')); if(k) return k[1];
+    const t=String(planParts(p).t||''); if(t.length>45) return ''; const q=t.replace(/^(comer|cenar|desayunar|almorzar)( en)?\s+/i,'').trim(); return q?q+(cityQ?', '+cityQ:''):''; }).filter(x=>x.length>2).slice(0,8);
   const isFly=sel.city==='Vuelos', first=sel.d===DAYS[0].d;
   const hot=isFly?HOTELES.find(h=>h.id===(first?'ams':'bxl')):HOTELES.find(h=>sel.sleep&&sel.sleep.startsWith(h.city)); const hq=hot?hot.q:'';
   let full=[], lbl=0, fl=null;
@@ -634,28 +635,33 @@ function sheetGasto(g){
 }
 function parseImporte(s){ const n=Number(String(s).trim().replace(/\s/g,'').replace(/\.(?=\d{3}\b)/g,'').replace(',','.')); return (isFinite(n)&&n>0)?Math.round(n*100):0; }
 
+function planParts(p){
+  if(p.titulo!==undefined&&p.titulo!==null) return {t:p.titulo, d:p.desc||''};
+  const x=String(p.texto||'').trim(); const m=x.match(/^([^\n]{4,70}?)(?::\s+|\.\s+|\n)([\s\S]+)$/);
+  if(m){ const d=m[2].trim(); return {t:m[1].trim(), d:d.charAt(0).toUpperCase()+d.slice(1)}; }
+  return x.length>70?{t:x.slice(0,67).replace(/\s+\S*$/,'')+'…', d:x}:{t:x, d:''};
+}
 function sheetPlan(dia0,p,pre){ pre=pre||{};
-  const nuevo=!p; p=p||{hora:'',texto:pre.texto||'',enlace:'',lugar:(pre.texto||'').replace(/^comer en\s+/i,'')};
+  const nuevo=!p; p=p||{hora:'',titulo:pre.texto||'',desc:'',web:'',ubicacion:pre.ubic||''};
+  const pp=planParts(p); const webV=p.web!==undefined?p.web:(p.enlace||'');
   const def=p.dia||dia0||(pre.city&&(DAYS.find(z=>z.city===pre.city)||{}).d)||((todayStr()>=TRIP_START&&todayStr()<=TRIP_END)?todayStr():TRIP_START);
   openSheet(`${sheetHead(nuevo?'Añadir plan':'Editar plan')}
    <label class="f">Día<select class="in" id="p-dia">${DAYS.map(x=>{const dd=new Date(x.d+'T12:00:00'); return `<option value="${x.d}" ${x.d===def?'selected':''}>${DIAL[dd.getDay()]} ${dd.getDate()} ${MES[dd.getMonth()]} · ${x.city}</option>`}).join('')}</select></label>
    <label class="f">Hora (opcional)<input class="in" id="p-h" type="time" value="${esc(p.hora)}"></label>
-   <label class="f">Plan<textarea class="in" id="p-t" placeholder="Qué vais a hacer, dónde, si hay que reservar…">${esc(p.texto)}</textarea></label>
-   <div class="f">Lugar para el mapa (opcional)<input class="in" id="p-lg" autocomplete="off" placeholder="Nombre, dirección o enlace de Maps" value="${esc(p.lugar||'')}">
-   <a class="btn ghost sm" id="p-mp" target="_blank" rel="noopener" style="margin-top:6px">${ic('out',16)} Buscar el sitio en Google Maps</a>
-   <div class="small muted">En Maps: abre el sitio, toca Compartir → Copiar y pega aquí el enlace (o su nombre/dirección).</div></div>
-   <label class="f">Enlace (opcional)<input class="in" id="p-l" type="url" inputmode="url" placeholder="https://…" value="${esc(p.enlace||'')}"></label>
+   <label class="f">Nombre del plan<input class="in" id="p-t" placeholder="Ej. Casa de Ana Frank" value="${esc(pp.t)}"></label>
+   <label class="f">Descripción (opcional)<textarea class="in" id="p-x" rows="4" placeholder="Detalles, horarios, si hay que reservar…">${esc(pp.d)}</textarea></label>
+   <a class="btn ghost sm" id="p-mp" target="_blank" rel="noopener">${ic('out',16)} Buscar sitio en Google Maps</a>
+   <label class="f">Enlace de ubicación (opcional)<input class="in" id="p-u" type="url" inputmode="url" placeholder="Pega aquí el enlace de Google Maps" value="${esc(p.ubicacion||'')}"></label>
+   <label class="f">Enlace web (opcional)<input class="in" id="p-l" type="url" inputmode="url" placeholder="https://…" value="${esc(webV)}"></label>
    <label class="f">Documento ligado (opcional)<select class="in" id="p-a"><option value="">Ninguno</option>${S.archivos.map(a=>`<option value="${a.id}" ${a.id===p.archivoId?'selected':''}>${esc(a.titulo)}</option>`).join('')}</select></label>
    <button class="btn ams" id="p-ok">Guardar</button>${nuevo?'':`<button class="btn danger" id="p-del">${ic('trash',18)} Borrar plan</button>`}`);
   const pcity=()=>{ const c=(DAYS.find(z=>z.d===$('#p-dia').value)||{}).city; return c&&c!=='Vuelos'?c:''; };
-  const setMp=()=>{ $('#p-mp').href='https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(($('#p-lg').value.trim()||$('#p-t').value.trim()||'')+' '+pcity()); }; setMp();
-  $('#p-lg').addEventListener('input',setMp); $('#p-t').addEventListener('input',setMp);
-  $('#p-ok').onclick=async()=>{ const t=$('#p-t').value.trim(); if(!t){ toast('Escribe el plan.'); return; }
-    let lg=$('#p-lg').value.trim();
-    if(/^https?:/i.test(lg)){ const m=lg.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/)||lg.match(/!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/)||lg.match(/[?&](?:q|query|destination)=(-?\d+\.\d+)(?:,|%2C)(-?\d+\.\d+)/); const nm=(lg.match(/\/maps\/place\/([^/@?]+)/)||[])[1];
-      if(nm){ lg=decodeURIComponent(nm.replace(/\+/g,' ')); } else if(m){ lg=m[1]+','+m[2]; } else { toast('Ese enlace corto de Maps no lo puedo leer. Pega el nombre o elige uno de la lista.'); return; } }
-    const dia=$('#p-dia').value; let enlace=$('#p-l').value.trim(); if(enlace&&!/^https?:\/\//i.test(enlace)) enlace='https://'+enlace;
-    const data={dia,hora:$('#p-h').value,texto:t,lugar:lg,enlace,archivoId:$('#p-a').value};
+  const setMp=()=>{ $('#p-mp').href='https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(($('#p-t').value.trim()||'')+' '+pcity()); }; setMp();
+  $('#p-t').addEventListener('input',setMp); $('#p-dia').addEventListener('change',setMp);
+  $('#p-ok').onclick=async()=>{ const t=$('#p-t').value.trim(); if(!t){ toast('Pon el nombre del plan.'); return; }
+    const desc=$('#p-x').value.trim(); const fix=v=>{ v=v.trim(); return v&&!/^https?:\/\//i.test(v)?'https://'+v:v; }; const ubicacion=fix($('#p-u').value);
+    const dia=$('#p-dia').value; const web=fix($('#p-l').value);
+    const data={dia,hora:$('#p-h').value,titulo:t,desc,texto:t+(desc?'\n'+desc:''),ubicacion,web,enlace:web,lugar:p.lugar||'',archivoId:$('#p-a').value};
     const ok=await dbDo(()=> nuevo ? F.addDoc(colRef('planes'),{...data,creado:Date.now()}) : F.setDoc(docRef('planes',p.id),{...data,orden:(p.dia===dia&&p.orden!=null)?p.orden:null,creado:p.creado||Date.now()}));
     if(ok){ closeSheet(); S.pd=dia; if(S.pick){ S.pick=null; S.tab='planes'; S.sub=null; render(); window.scrollTo(0,0);} else render(); } };
   if(!nuevo) $('#p-del').onclick=async()=>{ const ok=await dbDo(()=>F.deleteDoc(docRef('planes',p.id))); if(ok) closeSheet(); };
@@ -916,7 +922,7 @@ document.addEventListener('click', async e=>{
   else if(a==='editgasto'){ const g=S.gastos.find(x=>x.id===el.dataset.id); if(g) sheetGasto(g); }
   else if(a==='pday'){ S.pd=el.dataset.d; render(); }
   else if(a==='addchoose') sheetChoose(el.dataset.d);
-  else if(a==='plusrest') sheetPlan(S.pick||null,null,{texto:'Comer en '+el.dataset.n,city:el.dataset.c});
+  else if(a==='plusrest') sheetPlan(S.pick||null,null,{texto:'Comer en '+el.dataset.n,city:el.dataset.c,ubic:'https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(el.dataset.n+' '+(el.dataset.c||''))});
   else if(a==='pickcancel'){ const d=S.pick; S.pick=null; S.pd=d; S.tab='planes'; render(); window.scrollTo(0,0); }
   else if(a==='openlink'){ window.open(el.dataset.u,'_blank','noopener'); }
   else if(a==='addlugar') sheetLugar(null,{});
