@@ -217,7 +217,7 @@ const S = {
   yo: normP(store.get('viaje.yo')) || 'Alejandro',
   lugares:[], gTab:'lista',
   gastos: DATA.gastos.lineas.map((l,i)=>({id:'g'+(i+1), fecha:l[0], concepto:l[1], total:Math.round(l[2]*100), pagador:'Cristina', local:true, orden:i})),
-  marcas:{}, planes:[], archivos:[], fotos:[], pagos:[], wx:null, wxAt:0, fday:'', fcity:'', config:{},
+  marcas:{}, planes:[], archivos:[], fotos:[], tiktoks:[], tcity:'', ttipo:'', pagos:[], wx:null, wxAt:0, fday:'', fcity:'', config:{},
   online:false, dbReady:false
 };
 const CITYC = {'Ámsterdam':'var(--ams)','Brujas':'var(--bru)','Gante':'var(--bru)','Bruselas':'var(--bxl)'};
@@ -254,6 +254,7 @@ function listen(){
   F.onSnapshot(colRef('marcas'), snap=>{ const m={}; snap.forEach(d=>m[d.id]=d.data().v===true); S.marcas=m; render(['comer','inicio','planes','ruta','hoteles']); }, err);
   F.onSnapshot(colRef('planes'), snap=>{ const a=[]; snap.forEach(d=>a.push({id:d.id,...d.data()})); S.planes=a; render(['planes']); }, err);
   F.onSnapshot(colRef('archivos'), snap=>{ const a=[]; snap.forEach(d=>a.push({id:d.id,...d.data()})); S.archivos=a; render(['docs']); }, err);
+  F.onSnapshot(colRef('tiktoks'), snap=>{ const a=[]; snap.forEach(d=>a.push({id:d.id,...d.data()})); S.tiktoks=a; render(['tiktoks']); }, err);
   F.onSnapshot(colRef('fotos'), snap=>{ const a=[]; snap.forEach(d=>a.push({id:d.id,...d.data()})); S.fotos=a; render(['fotos']); }, err);
   F.onSnapshot(colRef('lugares'), snap=>{ const a=[]; snap.forEach(d=>a.push({id:d.id,...d.data()})); S.lugares=a; render(['comer','planes']); }, err);
   F.onSnapshot(colRef('config'), snap=>{ const c={}; snap.forEach(d=>c[d.id]=d.data()); S.config=c; render(['hoteles','inicio']); }, err);
@@ -520,6 +521,7 @@ function viewMas(){
     ${row('hoteles','bed','Hoteles','Dirección, fechas y notas de cada alojamiento','var(--ams-ink)','var(--ams-soft)')}
     ${row('docs','doc','Documentos','Billetes, entradas y reservas','var(--fly-ink)','var(--fly-soft)')}
     ${row('fotos','camera','Fotos','Las fotos del viaje, por día y ciudad','var(--bxl-ink)','var(--bxl-soft)')}
+    ${row('tiktoks','heart','TikToks','Vídeos guardados por ciudad: comida y planes','var(--ams-ink)','var(--ams-soft)')}
     ${row('tiempo','sun','Tiempo','Previsión por ciudad y día del viaje','var(--fly-ink)','var(--fly-soft)')}
     ${row('ruta','route','Ruta','Día a día, del viernes 13 al sábado 21','var(--ams-ink)','var(--ams-soft)')}
     <div class="stack"><div class="small muted">Eres <b>${esc(S.yo)}</b> en este móvil.</div>
@@ -598,7 +600,7 @@ function currentName(){ return S.sub || S.tab; }
 function render(only){
   if(!S.code){ renderGate(); return; }
   if(only && !only.includes(currentName())) { renderTabs(); return; }
-  const v={inicio:viewInicio,ruta:()=>(S.sub==='ruta'?backRow():'')+viewRuta(),comer:viewComer,planes:viewPlanes,mas:viewMas,hoteles:viewHoteles,docs:viewDocs,fotos:viewFotos,tiempo:viewTiempo,gastos:viewGastos}[currentName()];
+  const v={inicio:viewInicio,ruta:()=>(S.sub==='ruta'?backRow():'')+viewRuta(),comer:viewComer,planes:viewPlanes,mas:viewMas,hoteles:viewHoteles,docs:viewDocs,fotos:viewFotos,tiktoks:viewTiktoks,tiempo:viewTiempo,gastos:viewGastos}[currentName()];
   const y=window.scrollY; $('#view').innerHTML=v(); if(currentName()==='comer') applyCq(); if(currentName()==='planes'){ const o=document.querySelector('.dtile.on'); if(o&&o.parentNode) o.parentNode.scrollLeft=o.offsetLeft-o.parentNode.clientWidth/2+o.offsetWidth/2; } renderTabs(); if(only) window.scrollTo(0,y);
 }
 function renderTabs(){
@@ -775,6 +777,55 @@ function sheetHotel(){
 }
 const MAXB=650*1024;
 
+/* ====================== tiktoks ====================== */
+const TTIPOS=['Comida','Actividad'];
+function ttId(u){ const m=String(u||'').match(/\/(?:video|photo)\/(\d{8,25})/); return m?m[1]:''; }
+function viewTiktoks(){
+  const all=S.tiktoks.slice().sort((a,b)=>(b.creado||0)-(a.creado||0));
+  const list=all.filter(t=>(!S.tcity||t.ciudad===S.tcity)&&(!S.ttipo||t.tipo===S.ttipo));
+  const chip=(act,v,cur,label)=>`<button class="chip" data-act="${act}" data-v="${v}" style="cursor:pointer;border:1.5px solid ${cur===v?'var(--ink)':'transparent'};${cur===v?'font-weight:700;background:#fff':''}">${label}</button>`;
+  const cnt=c=>all.filter(t=>t.ciudad===c).length;
+  return backBar('TikToks')+`<div class="pad stack-l">
+  <button class="btn ams" data-act="addtt">${ic('plus')} Añadir TikTok</button>
+  <div class="stack" style="gap:8px"><div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:2px">${chip('tcity','',S.tcity,'Todas')}${FCITIES.map(c=>chip('tcity',c,S.tcity,c+(cnt(c)?' · '+cnt(c):''))).join('')}</div>
+  <div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:2px">${chip('ttipo','',S.ttipo,'Todo')}${chip('ttipo','Comida',S.ttipo,'Comida')}${chip('ttipo','Actividad',S.ttipo,'Actividades')}</div></div>
+  ${list.length?`<div class="stack">${list.map(t=>`<button class="listrow" data-act="opentt" data-id="${t.id}" style="text-align:left"><span style="width:44px;height:44px;border-radius:22px;background:var(--ams-soft);color:var(--ams-ink);display:flex;align-items:center;justify-content:center;flex:none">${ic(t.tipo==='Comida'?'eat':'plans')}</span><span class="stack" style="gap:2px;flex:1;min-width:0"><span style="font-weight:700;font-size:16px;overflow-wrap:break-word">${esc(t.nota||'TikTok sin nota')}</span><span class="small muted" style="text-align:left">${esc(t.ciudad||'')} · ${t.tipo==='Comida'?'Comida':'Actividad'} · ${esc(t.autor||'')}</span></span><span class="small" style="font-weight:700;color:var(--ams-ink)">Ver</span></button>`).join('')}</div><div class="small muted" style="text-align:center">${list.length} TikTok${list.length===1?'':'s'}</div>`
+   :`<div class="empty">${all.length?'No hay TikToks con este filtro.':'Aún no hay TikToks. Pega el enlace del primero con el botón de arriba.'}</div>`}</div>`;
+}
+function sheetTt(id){
+  const t=id?S.tiktoks.find(x=>x.id===id):null;
+  openSheet(`${sheetHead(t?'Editar TikTok':'Añadir TikTok')}
+   <label class="f">Enlace del TikTok<input class="in" id="t-u" inputmode="url" placeholder="Pega aquí el enlace" value="${esc(t?t.url:'')}" autocomplete="off"></label>
+   <div class="small muted" style="text-align:left">Mejor el enlace largo (tiktok.com/@usuario/video/123…). Si pegas uno corto (vm.tiktok.com/…) intento resolverlo.</div>
+   <label class="f">Ciudad<select class="in" id="t-c">${FCITIES.map(c=>`<option ${c===(t?t.ciudad:(S.tcity||'Ámsterdam'))?'selected':''}>${c}</option>`).join('')}</select></label>
+   <label class="f">Tipo<select class="in" id="t-t"><option value="Comida" ${t&&t.tipo==='Comida'||(!t&&S.ttipo==='Comida')?'selected':''}>Comida</option><option value="Actividad" ${t&&t.tipo==='Actividad'||(!t&&S.ttipo==='Actividad')?'selected':''}>Actividad</option></select></label>
+   <label class="f">Nota (opcional)<input class="in" id="t-n" placeholder="Ej: bar de tapas, ir el martes" value="${esc(t?t.nota||'':'')}"></label>
+   <div class="small" id="t-m" style="color:#B3261E;text-align:left"></div>
+   <button class="btn ams" id="t-ok">Guardar</button>`);
+  $('#t-ok').onclick=async()=>{
+    const url=$('#t-u').value.trim(); const m=$('#t-m'); m.textContent='';
+    if(!/^https?:\/\/([\w-]+\.)?tiktok\.com\//i.test(url)){ m.textContent='Pega un enlace de tiktok.com.'; return; }
+    const btn=$('#t-ok'); btn.disabled=true; let vid=ttId(url), full=url;
+    if(!vid){ btn.textContent='Resolviendo enlace…';
+      try{ const r=await fetch('https://www.tiktok.com/oembed?url='+encodeURIComponent(url)); const j=await r.json(); const mm=String(j.html||'').match(/data-video-id="(\d+)"/); if(mm){ vid=mm[1]; } }catch(_){}
+    }
+    if(!vid){ btn.disabled=false; btn.textContent='Guardar'; m.textContent='No he podido leer ese enlace corto. Ábrelo en TikTok, pulsa Compartir › Copiar enlace desde el navegador y pega el enlace largo.'; return; }
+    const data={url:full,vid,ciudad:$('#t-c').value,tipo:$('#t-t').value,nota:$('#t-n').value.trim()};
+    const ok=await dbDo(()=> t?F.setDoc(docRef('tiktoks',id),data,{merge:true}):F.addDoc(colRef('tiktoks'),{...data,autor:S.yo,creado:Date.now()}));
+    if(ok){ S.tcity=''; S.ttipo=''; closeSheet(); toast('TikTok guardado ✓'); render(['tiktoks']); } else { btn.disabled=false; btn.textContent='Guardar'; }
+  };
+}
+function sheetOpenTt(id){
+  const t=S.tiktoks.find(x=>x.id===id); if(!t) return;
+  openSheet(`${sheetHead(esc(t.nota||'TikTok'))}
+   <div class="small muted" style="text-align:left">${esc(t.ciudad||'')} · ${t.tipo==='Comida'?'Comida':'Actividad'} · añadido por ${esc(t.autor||'')}</div>
+   <iframe src="https://www.tiktok.com/embed/v2/${esc(t.vid)}" allow="fullscreen; autoplay; encrypted-media" allowfullscreen style="width:100%;height:min(720px,68vh);border:0;border-radius:14px;background:#000"></iframe>
+   <div class="small muted" style="text-align:left">Si no carga el vídeo, puede que el autor lo haya borrado o no permita verlo aquí.</div>
+   <button class="btn ams" data-act="openlink" data-u="${esc(t.url)}">Abrir en TikTok</button>
+   <div class="row" style="gap:8px"><button class="btn ghost" id="t-ed" style="flex:1">Editar</button><button class="btn danger" id="t-del" style="flex:1">Borrar</button></div>`);
+  $('#t-ed').onclick=()=>sheetTt(id);
+  $('#t-del').onclick=async()=>{ if(!confirm('¿Borrar este TikTok para los dos?')) return; const ok=await dbDo(()=>F.deleteDoc(docRef('tiktoks',id))); if(ok) closeSheet(); };
+}
 /* ====================== fotos ====================== */
 const FCITIES=['Ámsterdam','Brujas','Gante','Bruselas'];
 function cityOfDay(d){ const x=DAYS.find(z=>z.d===d); return x&&FCITIES.includes(x.city)?x.city:''; }
@@ -976,6 +1027,10 @@ document.addEventListener('click', async e=>{
   else if(a==='mapclose'){ const o=$('#mapov'); if(o) o.remove(); }
   else if(a==='addfoto') pickFotos(!!el.dataset.g);
   else if(a==='openfoto') sheetOpenFoto(el.dataset.id);
+  else if(a==='addtt') sheetTt();
+  else if(a==='opentt') sheetOpenTt(el.dataset.id);
+  else if(a==='tcity'){ S.tcity=el.dataset.v; render(['tiktoks']); }
+  else if(a==='ttipo'){ S.ttipo=el.dataset.v; render(['tiktoks']); }
   else if(a==='fcity'){ S.fcity=el.dataset.v; render(['fotos']); }
   else if(a==='fday'){ S.fday=el.dataset.v; render(['fotos']); }
   else if(a==='opendoc') sheetOpenDoc(el.dataset.id);
