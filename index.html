@@ -506,7 +506,7 @@ function viewPlanes(){
   return `<div class="stack-l" style="padding-top:20px"><div class="stack" style="gap:4px;padding:0 20px"><h1 style="font-size:30px">Planes</h1><div class="muted">Elige un día para ver todo lo que hacéis. Lo que añade uno lo ve el otro.</div></div>
   <div class="dstrip">${strip}</div>
   <div style="padding:0 20px" class="stack">
-   <div class="dhero" style="--c:${sel.c}">${WXH.fx.split(' ').filter(Boolean).map(f=>`<div class="wxfx ${f}"></div>`).join('')}<div style="font-family:'Space Grotesk';font-size:24px;line-height:30px;font-weight:700">${DIAL[dd.getDay()]} ${dd.getDate()} ${MES[dd.getMonth()]} · ${esc(sel.city)}</div>
+   <div class="dhero" style="--c:${sel.c}">${WXH.fx.split(' ').filter(Boolean).map(f=>`<div class="wxfx ${f}"></div>`).join('')}<div style="font-family:'Space Grotesk';font-size:24px;line-height:30px;font-weight:700">${DIAL[dd.getDay()]} ${dd.getDate()} ${MES[dd.getMonth()]}</div>
      ${WXH.html}
      ${sel.sleep?`<div class="row small" style="gap:6px">${ic('bed',16)} Dormís en ${esc(sel.sleep)}</div>`:''}
      ${rutaUrl?`<button class="btn sm" data-act="openlink" data-u="${esc(rutaUrl)}" style="background:#fff;color:var(--ink);align-self:flex-start">${ic('route',18)} Ver ruta · ${fl||(lbl+' parada'+(lbl===1?'':'s')+(hq?' desde el hotel':''))}</button>`:`<div class="small" style="opacity:.75">${ic('route',14)} Pon «Lugar para el mapa» en un plan o añade un restaurante al día y aparecerá «Ver ruta».</div>`}</div>
