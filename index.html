@@ -213,7 +213,7 @@ const S = {
   yo: normP(store.get('viaje.yo')) || 'Alejandro',
   lugares:[], gTab:'lista',
   gastos: DATA.gastos.lineas.map((l,i)=>({id:'g'+(i+1), fecha:l[0], concepto:l[1], total:Math.round(l[2]*100), pagador:'Cristina', local:true, orden:i})),
-  marcas:{}, planes:[], archivos:[], fotos:[], wx:null, wxAt:0, fday:'', fcity:'', config:{},
+  marcas:{}, planes:[], archivos:[], fotos:[], pagos:[], wx:null, wxAt:0, fday:'', fcity:'', config:{},
   online:false, dbReady:false
 };
 const CITYC = {'Ámsterdam':'var(--ams)','Brujas':'var(--bru)','Gante':'var(--bru)','Bruselas':'var(--bxl)'};
@@ -246,6 +246,7 @@ function listen(){
     if(arr.length || !snap.metadata.fromCache){ S.gastos=arr; }
     S.online=!snap.metadata.fromCache; render(['gastos','inicio']);
   }, err);
+  F.onSnapshot(colRef('pagos'), snap=>{ const a=[]; snap.forEach(d=>a.push({id:d.id,...d.data()})); S.pagos=a; render(['gastos','inicio']); }, err);
   F.onSnapshot(colRef('marcas'), snap=>{ const m={}; snap.forEach(d=>m[d.id]=d.data().v===true); S.marcas=m; render(['comer','inicio','planes','ruta','hoteles']); }, err);
   F.onSnapshot(colRef('planes'), snap=>{ const a=[]; snap.forEach(d=>a.push({id:d.id,...d.data()})); S.planes=a; render(['planes']); }, err);
   F.onSnapshot(colRef('archivos'), snap=>{ const a=[]; snap.forEach(d=>a.push({id:d.id,...d.data()})); S.archivos=a; render(['docs']); }, err);
@@ -541,7 +542,8 @@ function cuentas(){
   S.gastos.forEach(g=>{ const p=g.pagador;
     if(p==='Alejandro'||p==='Cristina'){ paid[p]+=g.total; cnt[p]++; owe[p==='Alejandro'?'Cristina':'Alejandro']+=half(g.total); }
     else { sin+=g.total; sinN++; } });
-  return {paid,cnt,sin,sinN,net:owe.Alejandro-owe.Cristina};   // net>0: Alejandro debe a Cristina
+  let net=owe.Alejandro-owe.Cristina, dev=0; (S.pagos||[]).forEach(p=>{ const i=+p.importe||0; dev+=i; if(p.de==='Alejandro') net-=i; else if(p.de==='Cristina') net+=i; });
+  return {paid,cnt,sin,sinN,net,dev};   // net>0: Alejandro debe a Cristina
 }
 function gastoRow(g){ return `<button class="listrow" data-act="editgasto" data-id="${g.id}"><span class="stack" style="gap:0;flex:1;min-width:0"><span style="font-weight:700">${esc(g.concepto)}</span><span class="small muted">${fmtFecha(g.fecha)}${g.pagador?' · pagó '+esc(g.pagador):' · sin pagador'}</span></span><span class="stack" style="gap:0;text-align:right"><span style="font-weight:700">${eur(g.total)}</span><span class="small muted">${eur(half(g.total))} c/u</span></span></button>`; }
 function viewGastos(){
@@ -551,6 +553,8 @@ function viewGastos(){
   const bal = (q.cnt.Alejandro+q.cnt.Cristina)===0 ? 'Indica quién pagó cada gasto para ver el saldo'
     : (q.net>0?`Alejandro debe <b>${eur(q.net)}</b> a Cristina`:(q.net<0?`Cristina debe <b>${eur(-q.net)}</b> a Alejandro`:'Estáis en paz'));
   const tab=S.gTab;
+  const devs=[...(S.pagos||[])].sort((a,b)=>(b.creado||0)-(a.creado||0));
+  const devList=devs.length?`<div class="stack" style="gap:8px"><h2 class="h2">Devoluciones</h2>${devs.map(p=>`<button class="listrow" data-act="editdev" data-id="${p.id}"><span class="stack" style="gap:0;flex:1;min-width:0"><span style="font-weight:700">${esc(p.de)} → ${esc(p.a)}</span><span class="small muted">${fmtFecha(p.fecha)}${p.nota?' · '+esc(p.nota):''}</span></span><span style="font-weight:700">${eur(p.importe)}</span></button>`).join('')}</div>`:'';
   let body='';
   if(tab==='lista'){
     body=`<div class="stack" style="gap:8px">${list.map(gastoRow).join('')}</div>`;
@@ -572,10 +576,10 @@ function viewGastos(){
      <div class="row" style="justify-content:space-between"><span class="small" style="font-weight:600">Total del viaje</span><span class="status ${S.online?'ok':'off'}"><i></i>${S.online?'Sincronizado':'Sin conexión'}</span></div>
      <div style="font-family:'Space Grotesk';font-size:34px;line-height:40px;font-weight:700">${eur(tot)}</div>
      <div style="font-size:16px;font-weight:600">${eur(half(tot))} por persona</div>
-     <div class="small" style="margin-top:4px">${bal}</div></div>
-   <button class="btn ams" data-act="addgasto">${ic('plus')} Añadir gasto</button>
+     <div class="small" style="margin-top:4px">${bal}${q.dev?` · ya devuelto ${eur(q.dev)}`:''}</div></div>
+   <div class="row" style="gap:8px"><button class="btn ams" data-act="addgasto" style="flex:1">${ic('plus')} Añadir gasto</button><button class="btn ghost" data-act="adddev" style="flex:1">${ic('wallet')} Devolver dinero</button></div>
    <div class="seg"><button class="${tab==='lista'?'on':''}" data-act="gtab" data-v="lista">Gastos</button><button class="${tab==='cuentas'?'on':''}" data-act="gtab" data-v="cuentas">Quién pagó</button></div>
-   ${body}</div>`;
+   ${body}${devList}</div>`;
 }
 
 /* ====================== render ====================== */
@@ -608,6 +612,27 @@ function openSheet(html){ $('#sheet').innerHTML=`<div class="sheetbg" data-act="
 function closeSheet(){ $('#sheet').innerHTML=''; }
 const sheetHead=t=>`<div class="row" style="justify-content:space-between"><h2 style="font-size:22px">${t}</h2><button class="iconbtn" data-act="closesheet" aria-label="Cerrar">${ic('x')}</button></div>`;
 
+
+function sheetDev(p){
+  const q=cuentas(); const nuevo=!p;
+  const deb=q.net>0?'Alejandro':(q.net<0?'Cristina':(S.yo||'Alejandro')); const cred=deb==='Alejandro'?'Cristina':'Alejandro';
+  p=p||{de:deb,a:cred,importe:Math.abs(q.net),fecha:todayStr(),nota:'Bizum'};
+  let de=p.de;
+  openSheet(`${sheetHead(nuevo?'Devolver dinero':'Editar devolución')}
+   <div class="small muted">Registra el Bizum (o efectivo) que uno le da al otro: se descuenta de lo que se debe.</div>
+   <div class="f">Quién paga<div class="seg" id="dv-seg"><button data-v="Alejandro" class="${de==='Alejandro'?'on':''}">Alejandro</button><button data-v="Cristina" class="${de==='Cristina'?'on':''}">Cristina</button></div></div>
+   <div class="small" id="dv-a"></div>
+   <label class="f">Importe (€)<input class="in" id="dv-i" inputmode="decimal" value="${p.importe?(p.importe/100).toFixed(2).replace('.',','):''}" placeholder="0,00"></label>
+   <label class="f">Fecha<input class="in" id="dv-f" type="date" value="${esc((p.fecha||'').slice(0,10))}"></label>
+   <label class="f">Nota (opcional)<input class="in" id="dv-n" value="${esc(p.nota||'')}" placeholder="Bizum"></label>
+   <button class="btn ams" id="dv-ok">Guardar</button>${nuevo?'':`<button class="btn danger" id="dv-del">${ic('trash',18)} Borrar devolución</button>`}`);
+  const upA=()=>{ $('#dv-a').textContent='Se lo da a '+(de==='Alejandro'?'Cristina':'Alejandro')+'.'; }; upA();
+  $('#dv-seg').onclick=e=>{ const b=e.target.closest('button'); if(!b) return; de=b.dataset.v; [...$('#dv-seg').children].forEach(x=>x.classList.toggle('on',x===b)); upA(); };
+  $('#dv-ok').onclick=async()=>{ const importe=parseImporte($('#dv-i').value); if(!importe){ toast('Pon el importe.'); return; }
+    const data={de,a:de==='Alejandro'?'Cristina':'Alejandro',importe,fecha:$('#dv-f').value||todayStr(),nota:$('#dv-n').value.trim(),creado:p.creado||Date.now()};
+    const ok=await dbDo(()=> nuevo?F.addDoc(colRef('pagos'),data):F.setDoc(docRef('pagos',p.id),data)); if(ok) closeSheet(); };
+  if(!nuevo) $('#dv-del').onclick=async()=>{ if(!confirm('¿Borrar esta devolución?')) return; const ok=await dbDo(()=>F.deleteDoc(docRef('pagos',p.id))); if(ok) closeSheet(); };
+}
 function sheetGasto(g){
   const nuevo=!g; g=g||{fecha:(todayStr()>=TRIP_START&&todayStr()<=TRIP_END)?todayStr():TRIP_START, concepto:'', total:0, pagador:''};
   let pag=g.pagador||'';
@@ -930,6 +955,8 @@ document.addEventListener('click', async e=>{
   else if(a==='editplan'){ const p=S.planes.find(x=>x.id===el.dataset.id); if(p) sheetPlan(p.dia,p); }
   else if(a==='edithotel') sheetHotel();
   else if(a==='adddoc') sheetDoc();
+  else if(a==='adddev') sheetDev();
+  else if(a==='editdev') sheetDev(S.pagos.find(x=>x.id===el.dataset.id));
   else if(a==='wxrefresh') loadWx(true);
   else if(a==='mapall') openMapAll();
   else if(a==='mapclose'){ const o=$('#mapov'); if(o) o.remove(); }
