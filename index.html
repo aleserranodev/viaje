@@ -413,7 +413,8 @@ function viewComer(){
   }
   const cl=x=>(x||'').replace(/\([^)]*\)/g,'').trim();
   S.mapItems=[...(hasData?DATA.desayunos_amsterdam.map(p=>[p.nombre,p.direccion]):[]),...mine.map(l=>[l.nombre,l.direccion])].map(([n,d])=>({n:cl(n),a:cl(d),c:S.city}));
-  const mapBtns=S.mapItems.length?`<div style="padding:0 20px"><button class="btn ghost" data-act="mapall" style="width:100%">${ic('pin',18)} Ver todos en el mapa (${S.mapItems.length})</button></div>`:'';
+  const LIST_URL={'Ámsterdam':'https://maps.app.goo.gl/cEK4Ksjw6rNjSCqTA'}[S.city];
+  const mapBtns=LIST_URL?`<div style="padding:0 20px"><button class="btn ghost" data-act="openlink" data-u="${LIST_URL}" style="width:100%">${ic('pin',18)} Ver todos en el mapa</button></div>`:(S.mapItems.length?`<div style="padding:0 20px"><button class="btn ghost" data-act="mapall" style="width:100%">${ic('pin',18)} Ver todos en el mapa (${S.mapItems.length})</button></div>`:'');
   return `<div class="stack" style="padding-top:20px;gap:14px">
     <div style="padding:0 20px"><div class="small muted" style="font-weight:600">Viaje noviembre 2026</div><h1 style="font-size:30px">Comer</h1></div>
     <div class="pills">${cities.map(c=>`<button class="pill ${S.city===c?'on':''}" style="--c:${CITYC[c]}" data-act="city" data-v="${c}">${c==='Ámsterdam'?'':`<span class="dot" style="background:${CITYC[c]}"></span>`}${c}</button>`).join('')}</div>
