@@ -105,20 +105,21 @@ h1,h2,h3{margin:0;font-family:'Space Grotesk','Inter',sans-serif;letter-spacing:
 .wxbox{position:relative;display:flex;align-items:center;gap:12px;background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.35);border-radius:16px;padding:10px 14px;backdrop-filter:blur(2px)}
 .dhero{position:relative;overflow:hidden;border-radius:22px;padding:18px;color:#fff;background:linear-gradient(135deg,var(--c),color-mix(in srgb,var(--c) 70%,#000));display:flex;flex-direction:column;gap:6px}
 .tline{display:flex;flex-direction:column;position:relative}
-.trow{display:grid;grid-template-columns:48px 14px 1fr 34px;gap:8px;align-items:stretch;position:relative}
+.trow{display:grid;grid-template-columns:44px 12px 1fr;gap:8px;align-items:stretch;position:relative}
 .trow .th{font-family:'Space Grotesk';font-weight:700;font-size:15px;padding-top:14px;text-align:right}
 .trow .tdot{position:relative}
 .trow .tdot::before{content:"";position:absolute;left:6px;top:0;bottom:0;width:2px;background:#E3D6C6}
 .trow .tdot::after{content:"";position:absolute;left:1px;top:18px;width:12px;height:12px;border-radius:6px;background:var(--ams);border:2px solid #fff;box-shadow:0 0 0 1px #E3D6C6}
 .trow:first-child .tdot::before{top:24px}.trow:last-child .tdot::before{bottom:calc(100% - 24px)}
 .tcard{display:flex;flex-direction:column;gap:4px;align-items:flex-start;text-align:left;margin:5px 0;padding:12px 14px;border-radius:16px;background:#fff;border:1px solid var(--line);font-family:inherit;cursor:pointer;width:100%}
-p,.tcard .td,.small.muted,.dhero .small,.card-p .small{text-align:justify;hyphens:auto;-webkit-hyphens:auto}
+p,.tcard .td,.small.muted,.dhero .small,.card-p .small{text-align:justify;hyphens:none;-webkit-hyphens:none;overflow-wrap:normal;word-break:normal}
 .row.small,.row .small,.chip,.tile .small,.dtile *,.empty .small{text-align:left}
 .tcard .tprice{align-self:flex-start;display:inline-flex;align-items:center;gap:6px;background:#FFE3C2;color:#7A3500;font-weight:800;font-size:14px;line-height:18px;padding:6px 12px;border-radius:999px;margin-top:4px}
-.tcard .td{display:block;font-size:14px;font-weight:400;color:#5E5347;line-height:20px;white-space:pre-line;overflow-wrap:anywhere;margin-top:2px}
+.tcard .td{display:block;font-size:14px;font-weight:400;color:#5E5347;line-height:20px;white-space:pre-line;overflow-wrap:break-word;margin-top:2px}
 .tcard .tt{font-size:15px;font-weight:600;color:#1F1B16;white-space:pre-line;overflow-wrap:anywhere}
 .grip{touch-action:none;display:flex;align-items:center;justify-content:center;color:#A39484;font-size:20px;letter-spacing:-3px;cursor:grab;user-select:none;-webkit-user-select:none;writing-mode:vertical-rl}
-.trow.dragging{opacity:.92;filter:drop-shadow(0 8px 14px rgba(0,0,0,.2));position:relative}
+.tcard{user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+.trow.dragging{transform:scale(1.02);opacity:.95;filter:drop-shadow(0 8px 14px rgba(0,0,0,.2));position:relative}
 .trow.dropbefore .tcard{box-shadow:0 -4px 0 -1px var(--ams)}
 .trow.dropend .tcard{box-shadow:0 4px 0 -1px var(--ams)}
 .tdoc{display:inline-flex;gap:6px;align-items:center;padding:6px 12px;border-radius:999px;background:var(--fly-soft);color:var(--fly-ink);font-size:13px;font-weight:700;margin-top:4px}
@@ -425,20 +426,28 @@ function viewComer(){
 function applyCq(){ const q=(S.cq||'').trim().toLowerCase(); const nf=s=>s.normalize('NFD').replace(/[\u0300-\u036f]/g,''); const qq=nf(q); let n=0; document.querySelectorAll('.card').forEach(c=>{ const ok=!qq||nf(c.textContent.toLowerCase()).includes(qq); c.style.display=ok?'':'none'; if(ok)n++; }); const root=document.querySelector('#c-q'); if(root){ let m=document.querySelector('#c-none'); if(qq&&!n){ if(!m){ m=document.createElement('div'); m.id='c-none'; m.className='small muted'; m.style.padding='0 20px'; m.textContent='Ningún sitio coincide en esta lista.'; root.parentNode.after(m);} } else if(m) m.remove(); } }
 document.addEventListener('input',e=>{ if(e.target&&e.target.id==='c-q'){ S.cq=e.target.value; applyCq(); } });
 
+let DRAG=null;
+document.addEventListener('touchmove',e=>{ if(DRAG&&DRAG.on) e.preventDefault(); },{passive:false});
+document.addEventListener('contextmenu',e=>{ if(e.target.closest&&e.target.closest('.tcard')) e.preventDefault(); });
 document.addEventListener('pointerdown',e=>{
-  const g=e.target.closest&&e.target.closest('.grip'); if(!g) return; const row=g.closest('.trow'); const list=row&&row.parentNode; if(!list) return;
-  e.preventDefault(); try{g.setPointerCapture(e.pointerId);}catch(_){}
-  row.classList.add('dragging'); const startY=e.clientY; const others=()=>[...list.children].filter(r=>r!==row); const startIdx=[...list.children].indexOf(row); let target=startIdx;
-  const move=ev=>{ const dy=ev.clientY-startY; row.style.transform='translateY('+dy+'px)'; row.style.zIndex=5;
+  if(e.pointerType==='mouse'&&e.button!==0) return;
+  const card=e.target.closest&&e.target.closest('.tcard'); if(!card) return; const row=card.closest('.trow'); const list=row&&row.parentNode; if(!list||list.children.length<2) return;
+  const d=DRAG={on:false,x:e.clientX,y:e.clientY,timer:0}; const pid=e.pointerId;
+  const others=()=>[...list.children].filter(r=>r!==row); const startIdx=[...list.children].indexOf(row); let target=startIdx;
+  const cleanup=()=>{ clearTimeout(d.timer); document.removeEventListener('pointermove',move); document.removeEventListener('pointerup',up); document.removeEventListener('pointercancel',up); if(DRAG===d) DRAG=null; };
+  const move=ev=>{ if(ev.pointerId!==pid) return;
+    if(!d.on){ if(Math.hypot(ev.clientX-d.x,ev.clientY-d.y)>8) cleanup(); return; }
+    const dy=ev.clientY-d.y; row.style.transform='translateY('+dy+'px)'; row.style.zIndex=5;
     const rr=row.getBoundingClientRect(); const mid=rr.top+rr.height/2; const os=others(); let n=0; os.forEach(o=>{ const b=o.getBoundingClientRect(); if(b.top+b.height/2<mid) n++; }); target=n;
     os.forEach((o,i)=>{ o.classList.toggle('dropbefore',i===n); o.classList.toggle('dropend',n===os.length&&i===os.length-1); }); };
-  const up=async()=>{ g.removeEventListener('pointermove',move); g.removeEventListener('pointerup',up); g.removeEventListener('pointercancel',up);
+  const up=async()=>{ const was=d.on; cleanup(); if(!was) return; window.__dragEnd=Date.now();
     const os=others(); os.forEach(o=>o.classList.remove('dropbefore','dropend')); row.classList.remove('dragging'); row.style.transform=''; row.style.zIndex='';
     if(target===startIdx) return;
     os.splice(target,0,row); const keys=os.map(r=>r.dataset.k);
     const ok=await dbDo(()=>Promise.all(keys.map((k,i)=>{ const [kind,id]=k.split(':'); return F.setDoc(docRef(kind==='plan'?'planes':'lugares',id),{orden:i*10},{merge:true}); })));
     if(!ok) render(); };
-  g.addEventListener('pointermove',move); g.addEventListener('pointerup',up); g.addEventListener('pointercancel',up);
+  d.timer=setTimeout(()=>{ d.on=true; row.classList.add('dragging'); try{ navigator.vibrate&&navigator.vibrate(25); }catch(_){} },380);
+  document.addEventListener('pointermove',move); document.addEventListener('pointerup',up); document.addEventListener('pointercancel',up);
 });
 const GRATE={"Greenwoods Singel":"4,6|5466","Chun Café":"4,4|1301","The Pancake Bakery":"4,3|10537","Omelegg":"4,6|6618","Winkel 43":"4,5|16922","Belly Pepper":"4,7|505","Little Collins":"4,5|2030","Florentin":"4,8|9272","Bakers & Roasters":"4,6|5077","Miri Mary":"4,7|5848","Fort Negen":"4,7|1566","Lourens":"4,6|1955","Van Stapele Koekmakerij":"4,8|16406","Caldi e Freddi":"4,8|1819","Bouillon d'Amsterdam":"4,2|777","Alf Leila Shawarma":"4,4|53","The Lebanese Sajeria":"4,5|700","Pizza Beppe":"4,4|270","Harry's all day Italian":"4,5|313","Café Sonneveld":"4,6|4791","Hoi Tin":"4,3|2478","Davie's Sandwiches":"4,8|845","Vlaams Friteshuis Vleminckx":"4,5|6015","Fabel Friet":"4,5|9991","A Volo":"4,9|445","Breadwinner":"4,6|626","Eetsalon Van Dobben":"4,4|2539","De Tokoman":"4,0|185","Camino Taqueria":"4,3|725","Franggo West":"4,4|451","Foodhallen":"4,4|23289","Warung Spang Makandra":"4,2|2029","Wonton Express":"4,5|4","Jinweide Lanzhou Beef Noodles":"4,6|618","Il Vicolo":"4,8|3855","Cannibale Royale":"4,5|7329","'t Zwaantje":"4,5|2724","Pie-Nong Thai":"4,5|212","Moeders":"4,5|6022","Burger 'n Shake":"5,0|2","The Pantry":"4,7|10052","Café Binnenvisser":"4,3|702","New Draver":"4,5|540","Coffeebar Adriaan":"4,7|656","HIDE Breakfast / Lunch":"4,9|2670","Blackbird":"4,6|744","Margritt":"3,9|448","GingerBread Tea Room":"4,3|329","Balthasar":"4,6|1411","That's Toast":"4,8|5098","Kaffee Kamiel":"4,4|972","Sanseveria Bagelsalon":"4,6|2268","'t Zwart Huis":"4,0|1161","Mosh":"4,6|389","Cambrinus":"4,3|8146","D's Deldycke Traiteurs":"4,5|8","De Vlaamsche Pot":"3,8|1715","Bocca":"4,4|1859","Vlissinghe":"4,6|2952","De Gastro":"4,6|3553","Tou.Gou":"4,7|221","Bistro Christophe":"4,6|429","FritBar":"4,4|5494","Ganzespel":"4,1|43","Venezia del Nord":"4,7|2317","Vino Vino":"4,3|218","Mozart":"4,6|4274","Tom's Diner":"4,6|941","De Passage":"4,4|761","Maison Dandoy":"3,8|4811","Aux Merveilleux de Fred":"4,6|1846","Crème":"4,1|2282","Woodpecker 47":"4,2|4849","Cups & Rolls":"4,7|434","Wittamer":"4,0|1670","Frank.":"4,4|1605","Pinpin":"4,9|343","Charli":"4,5|1796","MOK Coffee":"4,6|1414","La Boule":"4,6|251","Boulengier":"4,6|770","Hinterland Urban Refuge":"4,4|992","Fritland":"4,0|11225","Les Brigittines":"4,5|995","Pois Chiche":"4,5|1219","Fin de Siècle":"4,6|10742","In 't Spinnekopke":"4,4|1264","Bia Mara":"4,5|4566","Tonton Garby":"4,7|2867","Bouillon Bruxelles":"4,2|4142","Au Vieux Saint Martin":"4,1|2216","Chez Léon":"3,9|15926","Le Marmiton":"4,5|4278","Noordzee Mer du Nord":"4,6|5260","Le Vismet":"4,5|589","Taverne du Passage":"4,1|2879","Frites Atelier":"4,5|7174","WOLF Food Market":"4,4|12498","Au Stekerlapatte":"4,5|1191","La Porteuse d'Eau":"4,4|1759","Le Tournant":"4,6|933","Rambo Washington":"4,5|1937","9 et Voisins":"4,6|4036"};
 const gr=(n,l)=>{ let v=GRATE[(n||'').replace(/\([^)]*\)/g,'').trim()]; if(!v&&l&&l.nota) v=l.nota+'|'+String(l.resenas||'').replace(/\D/g,''); if(!v) return ''; const [r,c]=v.split('|'); if(!c) return `<span class="chip" style="background:#FFF1C9;color:#5C4300;font-weight:700;align-self:flex-start;margin-top:4px">★ ${r}</span>`; return `<span class="chip" style="background:#FFF1C9;color:#5C4300;font-weight:700;align-self:flex-start;margin-top:4px">★ ${r} · ${(+c).toLocaleString('es-ES')} reseñas</span>`; };
@@ -475,8 +484,8 @@ function viewPlanes(){
   const info=(sel.lines||[]).filter(l=>!/^Sin planes/i.test(l));
   const row=r=>{
     if(r.kind==='plan'){ const p=r.p; const dc=p.archivoId&&S.archivos.find(a=>a.id===p.archivoId);
-      return `<div class="trow" data-k="plan:${p.id}"><div class="th">${p.hora?esc(p.hora):'<span class="muted">—</span>'}</div><div class="tdot"></div><button class="tcard" data-act="editplan" data-id="${p.id}"><span class="tt">${esc(planParts(p).t)}</span>${planParts(p).d?`<span class="td">${esc(planParts(p).d)}</span>`:''}<span class="wrap">${p.precio?`<span class="tprice">${ic('wallet',16)} ${esc(p.precio)}</span>`:''}${dc?`<span data-act="opendoc" data-id="${dc.id}" class="tdoc">${ic('file',16)} Ver entrada</span>`:''}${(p.web||p.enlace)?`<span data-act="openlink" data-u="${esc(p.web||p.enlace)}" class="tdoc" style="background:var(--ams-soft);color:var(--ams-ink)">${ic('out',16)} Ver web</span>`:''}${p.ubicacion?`<span data-act="openlink" data-u="${esc(p.ubicacion)}" class="tdoc" style="background:var(--bru-soft);color:var(--bru-ink)">${ic('pin',16)} Ver ubicación</span>`:''}</span></button><span class="grip" aria-label="Mover" title="Arrastra para ordenar">⋮⋮</span></div>`; }
-    const l=r.l; return `<div class="trow" data-k="lug:${l.id}"><div class="th"><span class="muted">${ic('eat',18)}</span></div><div class="tdot"></div><button class="tcard" data-act="editlugar" data-id="${l.id}"><span class="tt">${esc(l.nombre)}</span><span class="small muted">${esc(l.comida)} · ${esc(l.ciudad)}</span></button><span class="grip" aria-label="Mover" title="Arrastra para ordenar">⋮⋮</span></div>`; };
+      return `<div class="trow" data-k="plan:${p.id}"><div class="th">${p.hora?esc(p.hora):'<span class="muted">—</span>'}</div><div class="tdot"></div><button class="tcard" data-act="editplan" data-id="${p.id}"><span class="tt">${esc(planParts(p).t)}</span>${planParts(p).d?`<span class="td">${esc(planParts(p).d)}</span>`:''}<span class="wrap">${p.precio?`<span class="tprice">${ic('wallet',16)} ${esc(p.precio)}</span>`:''}${dc?`<span data-act="opendoc" data-id="${dc.id}" class="tdoc">${ic('file',16)} Ver entrada</span>`:''}${(p.web||p.enlace)?`<span data-act="openlink" data-u="${esc(p.web||p.enlace)}" class="tdoc" style="background:var(--ams-soft);color:var(--ams-ink)">${ic('out',16)} Ver web</span>`:''}${p.ubicacion?`<span data-act="openlink" data-u="${esc(p.ubicacion)}" class="tdoc" style="background:var(--bru-soft);color:var(--bru-ink)">${ic('pin',16)} Ver ubicación</span>`:''}</span></button></div>`; }
+    const l=r.l; return `<div class="trow" data-k="lug:${l.id}"><div class="th"><span class="muted">${ic('eat',18)}</span></div><div class="tdot"></div><button class="tcard" data-act="editlugar" data-id="${l.id}"><span class="tt">${esc(l.nombre)}</span><span class="small muted">${esc(l.comida)} · ${esc(l.ciudad)}</span></button></div>`; };
   const cityQ=sel.city==='Vuelos'?'':sel.city;
   const KNOWN=[[/ana frank/i,'Casa de Ana Frank, Prinsengracht 263-267, Amsterdam'],[/parlamento europeo/i,'Parlamento Europeo, Rue Wiertz 60, Bruxelles']];
   const WXH=wxHero(sel);
@@ -937,6 +946,7 @@ async function sheetOpenDoc(id){
 
 /* ====================== eventos ====================== */
 document.addEventListener('click', async e=>{
+  if(window.__dragEnd&&Date.now()-window.__dragEnd<500){ window.__dragEnd=0; e.preventDefault(); return; }
   const el=e.target.closest('[data-act]'); if(!el) return; const a=el.dataset.act;
   if(a==='closesheet'){ if(e.target===el||el.classList.contains('iconbtn')||el.closest('.iconbtn')) closeSheet(); return; }
   if(a==='tab'){ if(el.dataset.tab!=='comer') S.pick=null; S.tab=el.dataset.tab; S.sub=null; render(); window.scrollTo(0,0); if(S.tab==='planes') loadWx(); }
