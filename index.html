@@ -387,7 +387,7 @@ function viewComer(){
   const mineHtml = mine.map(lugarCard).join('');
   let body='';
   if(hasData){
-    body = `<div class="small muted">Ordenados del más cercano al más lejano del hotel. Los minutos andando son estimados (salvo Greenwoods): compruébalos en Maps.</div>` + DATA.desayunos_amsterdam.map(p=>{
+    body = `<div class="small muted">Ordenados del más cercano al más lejano del hotel. Los minutos andando son estimados (salvo Greenwoods): compruébalos en Maps.</div>` + DATA.desayunos_amsterdam.filter(p=>!S.marcas['oculto:'+(FOTOS[p.nombre]||p.nombre)]).map(p=>{
       const key=(FOTOS[p.nombre]||p.nombre); const prob=!!S.marcas['probado:'+key], fav=!!S.marcas['fav:'+key];
       const mins = p.minutos_andando_hotel; const walk = `${p.estimado?'≈ ':''}${mins} min andando del hotel`;
       const badge = p.viral ? '<span class="badge hot">Sí o sí · viral</span>' : (BADGE[p.nombre]?`<span class="badge">${BADGE[p.nombre]}</span>`:'');
@@ -400,7 +400,7 @@ function viewComer(){
           ${DESC[p.nombre]?`<p style="margin:0;font-size:14px;line-height:21px;color:#3D352C">${esc(DESC[p.nombre])}</p>`:''}
           <div class="row" style="gap:8px">
             <a class="btn ams" href="${p.maps}" target="_blank" rel="noopener" style="flex:1">Abrir en Google Maps ${ic('out',18,2)}</a>
-            <button class="iconbtn" data-act="plusrest" data-n="${esc(p.nombre)}" data-c="Ámsterdam" aria-label="Añadir a un plan" style="width:48px;height:48px">${ic('plus')}</button>
+            <button class="iconbtn" data-act="plusrest" data-n="${esc(p.nombre)}" data-c="Ámsterdam" aria-label="Añadir a un plan" style="width:48px;height:48px">${ic('plus')}</button><button class="iconbtn" data-act="hidestatic" data-k="${esc(key)}" data-n="${esc(p.nombre)}" aria-label="Borrar de la lista" style="width:48px;height:48px;color:#A32020">${ic('trash')}</button>
             
           </div>
           ${(fav||prob)?`<div class="small muted">${prob?'Probado ':''}${fav&&prob?'· ':''}${fav?'Favorito':''}</div>`:''}
@@ -412,7 +412,7 @@ function viewComer(){
     body = `<div class="empty"><div style="font-weight:700;color:var(--ink);margin-bottom:4px">${S.meal} en ${S.city}</div>Aún no hay sitios aquí. Añade el primero con el botón de arriba.</div>`;
   }
   const cl=x=>(x||'').replace(/\([^)]*\)/g,'').trim();
-  S.mapItems=[...(hasData?DATA.desayunos_amsterdam.map(p=>[p.nombre,p.direccion]):[]),...mine.map(l=>[l.nombre,l.direccion])].map(([n,d])=>({n:cl(n),a:cl(d),c:S.city}));
+  S.mapItems=[...(hasData?DATA.desayunos_amsterdam.filter(p=>!S.marcas['oculto:'+(FOTOS[p.nombre]||p.nombre)]).map(p=>[p.nombre,p.direccion]):[]),...mine.map(l=>[l.nombre,l.direccion])].map(([n,d])=>({n:cl(n),a:cl(d),c:S.city}));
   const LIST_URL={'Ámsterdam':'https://maps.app.goo.gl/cEK4Ksjw6rNjSCqTA'}[S.city];
   const mapBtns=LIST_URL?`<div style="padding:0 20px"><button class="btn ghost" data-act="openlink" data-u="${LIST_URL}" style="width:100%">${ic('pin',18)} Ver todos en el mapa</button></div>`:(S.mapItems.length?`<div style="padding:0 20px"><button class="btn ghost" data-act="mapall" style="width:100%">${ic('pin',18)} Ver todos en el mapa (${S.mapItems.length})</button></div>`:'');
   return `<div class="stack" style="padding-top:20px;gap:14px">
@@ -466,7 +466,7 @@ function lugarCard(l){
       ${l.desc?`<p style="margin:0;white-space:pre-line;font-size:14px;line-height:21px;color:#3D352C">${esc(l.desc)}</p>`:''}
       <div class="row" style="gap:8px">
         <a class="btn ams" href="${esc(maps)}" target="_blank" rel="noopener" style="flex:1">Abrir en Google Maps ${ic('out',18,2)}</a>
-        <button class="iconbtn" data-act="plusrest" data-n="${esc(l.nombre)}" data-c="${esc(l.ciudad||'')}" aria-label="Añadir a un plan" style="width:48px;height:48px">${ic('plus')}</button>
+        <button class="iconbtn" data-act="plusrest" data-n="${esc(l.nombre)}" data-c="${esc(l.ciudad||'')}" aria-label="Añadir a un plan" style="width:48px;height:48px">${ic('plus')}</button><button class="iconbtn" data-act="dellugar" data-id="${l.id}" data-n="${esc(l.nombre)}" aria-label="Borrar de la lista" style="width:48px;height:48px;color:#A32020">${ic('trash')}</button>
         
       </div>
       <button class="btn ghost sm" data-act="editlugar" data-id="${l.id}" style="width:100%">Editar este sitio</button>
@@ -1060,6 +1060,8 @@ document.addEventListener('click', async e=>{
   else if(a==='pickcancel'){ const d=S.pick; S.pick=null; S.pd=d; S.tab='planes'; render(); window.scrollTo(0,0); }
   else if(a==='openlink'){ window.open(el.dataset.u,'_blank','noopener'); }
   else if(a==='addlugar') sheetLugar(null,{});
+  else if(a==='dellugar'){ if(!confirm('¿Borrar «'+el.dataset.n+'» de la lista para los dos?')) return; await dbDo(()=>F.deleteDoc(docRef('lugares',el.dataset.id))); }
+  else if(a==='hidestatic'){ if(!confirm('¿Borrar «'+el.dataset.n+'» de la lista para los dos?')) return; const k='oculto:'+el.dataset.k; S.marcas[k]=true; render(); await dbDo(()=>F.setDoc(docRef('marcas',k),{v:true})); }
   else if(a==='editlugar'){ const l=S.lugares.find(x=>x.id===el.dataset.id); if(l) sheetLugar(l); }
   else if(a==='editplan'){ const p=S.planes.find(x=>x.id===el.dataset.id); if(p) sheetPlan(p.dia,p); }
   else if(a==='edithotel') sheetHotel();
