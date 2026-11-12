@@ -544,12 +544,15 @@ function viewHoteles(){
     </div></div>`; }).join('')}</div>`;
 }
 const CATS=['Transportes','Hoteles','Entradas','Otros'];
+const TSUBS=['Vuelo','Tren','Bus','Otro'];
+const subOf=a=>a.sub||(a.cat==='Vuelos'?'Vuelo':a.cat==='Trenes'?'Tren':'Otro');
 const catOf=a=>(a.cat==='Vuelos'||a.cat==='Trenes')?'Transportes':a.cat;
+const docRow=a=>`<button class="listrow" data-act="opendoc" data-id="${a.id}"><span style="width:44px;height:44px;border-radius:22px;background:var(--fly-soft);color:var(--fly-ink);display:flex;align-items:center;justify-content:center;flex:none">${ic('file')}</span><span class="stack" style="gap:0;flex:1;min-width:0"><span style="font-weight:700;overflow:hidden;text-overflow:ellipsis">${esc(a.titulo)}</span><span class="small muted">${a.link?'Enlace':esc(a.nombre||'Archivo')}</span></span></button>`;
 function viewDocs(){
   const by = c=>S.archivos.filter(a=>catOf(a)===c).sort((a,b)=>(a.titulo||'').localeCompare(b.titulo||''));
   return backBar('Documentos') + `<div class="pad stack-l"><div class="muted small">Sube fotos o PDF pequeños (hasta ≈ 650 KB) de billetes, entradas y reservas, o pega un enlace. Los ven los dos móviles.</div>
   <button class="btn fly" data-act="adddoc">${ic('plus')} Añadir documento</button>
-  ${S.archivos.length?CATS.filter(c=>by(c).length).map(c=>`<div class="stack" style="gap:8px"><h2 class="h2">${c}</h2>${by(c).map(a=>`<button class="listrow" data-act="opendoc" data-id="${a.id}"><span style="width:44px;height:44px;border-radius:22px;background:var(--fly-soft);color:var(--fly-ink);display:flex;align-items:center;justify-content:center;flex:none">${ic('file')}</span><span class="stack" style="gap:0;flex:1;min-width:0"><span style="font-weight:700;overflow:hidden;text-overflow:ellipsis">${esc(a.titulo)}</span><span class="small muted">${a.link?'Enlace':esc(a.nombre||'Archivo')}</span></span></button>`).join('')}</div>`).join(''):`<div class="empty">Aún no hay documentos.<br>Empieza con los billetes de avión.</div>`}</div>`;
+  ${S.archivos.length?CATS.filter(c=>by(c).length).map(c=>`<div class="stack" style="gap:8px"><h2 class="h2">${c}</h2>${c==='Transportes'?TSUBS.filter(t=>by(c).some(a=>subOf(a)===t)).map(t=>`<div class="small muted" style="font-weight:700;text-align:left;margin-top:2px">${t==='Vuelo'?'Vuelos':t==='Tren'?'Trenes':t==='Bus'?'Bus':'Otros'}</div>${by(c).filter(a=>subOf(a)===t).map(docRow).join('')}`).join(''):by(c).map(docRow).join('')}</div>`).join(''):`<div class="empty">Aún no hay documentos.<br>Empieza con los billetes de avión.</div>`}</div>`;
 }
 function totalGastos(){ return S.gastos.reduce((s,g)=>s+(g.total||0),0); }
 function cuentas(){
@@ -949,17 +952,20 @@ function sheetDoc(){
   openSheet(`${sheetHead('Añadir documento')}
    <label class="f">Título<input class="in" id="d-t" placeholder="Vuelo ida Sevilla → Ámsterdam"></label>
    <label class="f">Categoría<select class="in" id="d-c">${CATS.map(c=>`<option value="${c}">${c==="Transportes"?"Transportes (vuelo, tren, bus…)":c}</option>`).join('')}</select></label>
+   <label class="f" id="d-sw">Tipo de transporte<select class="in" id="d-s">${TSUBS.map(t=>`<option>${t}</option>`).join('')}</select></label>
    <label class="f">Archivo (foto o PDF, hasta ≈ 650 KB)<input class="in" id="d-f" type="file" accept="image/*,application/pdf" style="padding:10px 12px;height:auto"></label>
    <label class="f">…o un enlace (si el archivo pesa mucho)<input class="in" id="d-l" inputmode="url" placeholder="https://"></label>
    <div class="small muted" id="d-m"></div>
    <button class="btn fly" id="d-ok">Guardar</button>`);
+  const syncSub=()=>{ $('#d-sw').style.display=$('#d-c').value==='Transportes'?'':'none'; }; $('#d-c').onchange=syncSub; syncSub();
+  $('#d-t').oninput=()=>{ const v=$('#d-t').value.toLowerCase(); if($('#d-c').value!=='Transportes') return; $('#d-s').value=/vuelo|avi[oó]n|flight/.test(v)?'Vuelo':/tren|renfe|sncb|ns |train/.test(v)?'Tren':/bus|autob/.test(v)?'Bus':$('#d-s').value; };
   $('#d-ok').onclick=async()=>{
     const titulo=$('#d-t').value.trim(), cat=$('#d-c').value, file=$('#d-f').files[0], link=$('#d-l').value.trim();
     if(!titulo){ toast('Pon un título.'); return; } if(!file&&!link){ toast('Elige un archivo o pega un enlace.'); return; }
     if(link && !/^https?:\/\//i.test(link)){ toast('El enlace debe empezar por http o https.'); return; }
     const btn=$('#d-ok'); btn.disabled=true; $('#d-m').textContent='Guardando…';
     try{
-      const meta={titulo,cat,creado:Date.now()}; let data=null;
+      const meta={titulo,cat,creado:Date.now()}; if(cat==='Transportes') meta.sub=$('#d-s').value; let data=null;
       if(file){
         let blob=file;
         if(file.type.startsWith('image/')) blob=await shrinkImage(file);
@@ -985,7 +991,7 @@ async function shrinkImage(file, maxBytes=MAXB, maxDim=1800){
 }
 async function sheetOpenDoc(id){
   const a=S.archivos.find(x=>x.id===id); if(!a) return;
-  openSheet(`${sheetHead(esc(a.titulo))}<div class="small muted">${esc(catOf(a))}${a.link?'':' · '+esc(a.nombre||'')}</div>${S.planes.filter(p=>p.archivoId===id).map(p=>`<div class="small" style="font-weight:600">Plan: ${esc(fmtFecha(p.dia))}${p.hora?' · '+esc(p.hora):''} · ${esc(p.texto)}</div>`).join('')}<div id="d-body" class="stack"><div class="empty">Cargando…</div></div><button class="btn danger" id="d-del">${ic('trash',18)} Borrar documento</button>`);
+  openSheet(`${sheetHead(esc(a.titulo))}<div class="small muted">${esc(catOf(a))}${catOf(a)==='Transportes'?' · '+subOf(a):''}${a.link?'':' · '+esc(a.nombre||'')}</div>${S.planes.filter(p=>p.archivoId===id).map(p=>`<div class="small" style="font-weight:600">Plan: ${esc(fmtFecha(p.dia))}${p.hora?' · '+esc(p.hora):''} · ${esc(p.texto)}</div>`).join('')}<div id="d-body" class="stack"><div class="empty">Cargando…</div></div><button class="btn danger" id="d-del">${ic('trash',18)} Borrar documento</button>`);
   $('#d-del').onclick=async()=>{ if(!confirm('¿Borrar este documento?')) return; const ok=await dbDo(async()=>{ await F.deleteDoc(docRef('archivos',id)); if(!a.link) await F.deleteDoc(docRef('blobs',id)); }); if(ok) closeSheet(); };
   if(a.link){ $('#d-body').innerHTML=`<a class="btn fly" href="${esc(a.link)}" target="_blank" rel="noopener">Abrir enlace ${ic('out',18,2)}</a>`; return; }
   try{
