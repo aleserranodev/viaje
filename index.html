@@ -485,8 +485,8 @@ function viewPlanes(){
   rows.sort((a,b)=>{ const ao=a.o!=null, bo=b.o!=null; if(ao&&bo) return a.o-b.o; if(ao!==bo) return ao?-1:1; return (a.h||'99').localeCompare(b.h||'99'); });
   const info=(sel.lines||[]).filter(l=>!/^Sin planes/i.test(l));
   const row=r=>{
-    if(r.kind==='plan'){ const p=r.p; const dc=p.archivoId&&S.archivos.find(a=>a.id===p.archivoId);
-      return `<div class="trow" data-k="plan:${p.id}"><div class="th">${p.hora?esc(p.hora):'<span class="muted">—</span>'}</div><div class="tdot"></div><button class="tcard" data-act="editplan" data-id="${p.id}"><span class="tt">${esc(planParts(p).t)}</span>${planParts(p).d?`<span class="td">${esc(planParts(p).d)}</span>`:''}<span class="wrap">${p.precio?`<span class="tprice">${ic('wallet',16)} ${esc(p.precio)}</span>`:''}${dc?`<span data-act="opendoc" data-id="${dc.id}" class="tdoc">${ic('file',16)} Ver entrada</span>`:''}${(p.web||p.enlace)?`<span data-act="openlink" data-u="${esc(p.web||p.enlace)}" class="tdoc" style="background:var(--ams-soft);color:var(--ams-ink)">${ic('out',16)} Ver web</span>`:''}${p.ubicacion?`<span data-act="openlink" data-u="${esc(p.ubicacion)}" class="tdoc" style="background:var(--bru-soft);color:var(--bru-ink)">${ic('pin',16)} Ver ubicación</span>`:''}</span></button></div>`; }
+    if(r.kind==='plan'){ const p=r.p; const dcs=pdocs(p).map(i=>S.archivos.find(a=>a.id===i)).filter(Boolean);
+      return `<div class="trow" data-k="plan:${p.id}"><div class="th">${p.hora?esc(p.hora):'<span class="muted">—</span>'}</div><div class="tdot"></div><button class="tcard" data-act="editplan" data-id="${p.id}"><span class="tt">${esc(planParts(p).t)}</span>${planParts(p).d?`<span class="td">${esc(planParts(p).d)}</span>`:''}<span class="wrap">${p.precio?`<span class="tprice">${ic('wallet',16)} ${esc(p.precio)}</span>`:''}${dcs.map(dc=>`<span data-act="opendoc" data-id="${dc.id}" class="tdoc">${ic('file',16)} ${dcs.length>1?esc((dc.titulo||'Documento').slice(0,22)):'Ver entrada'}</span>`).join('')}${(p.web||p.enlace)?`<span data-act="openlink" data-u="${esc(p.web||p.enlace)}" class="tdoc" style="background:var(--ams-soft);color:var(--ams-ink)">${ic('out',16)} Ver web</span>`:''}${p.ubicacion?`<span data-act="openlink" data-u="${esc(p.ubicacion)}" class="tdoc" style="background:var(--bru-soft);color:var(--bru-ink)">${ic('pin',16)} Ver ubicación</span>`:''}</span></button></div>`; }
     const l=r.l; return `<div class="trow" data-k="lug:${l.id}"><div class="th"><span class="muted">${ic('eat',18)}</span></div><div class="tdot"></div><button class="tcard" data-act="editlugar" data-id="${l.id}"><span class="tt">${esc(l.nombre)}</span><span class="small muted">${esc(l.comida)} · ${esc(l.ciudad)}</span></button></div>`; };
   const cityQ=sel.city==='Vuelos'?'':sel.city;
   const KNOWN=[[/ana frank/i,'Casa de Ana Frank, Prinsengracht 263-267, Amsterdam'],[/parlamento europeo/i,'Parlamento Europeo, Rue Wiertz 60, Bruxelles']];
@@ -544,6 +544,7 @@ function viewHoteles(){
     </div></div>`; }).join('')}</div>`;
 }
 const CATS=['Transportes','Hoteles','Entradas','Otros'];
+const pdocs=p=>Array.isArray(p.archivoIds)?p.archivoIds.filter(Boolean):(p.archivoId?[p.archivoId]:[]);
 const TSUBS=['Vuelo','Tren','Bus','Otro'];
 const subOf=a=>a.sub||(a.cat==='Vuelos'?'Vuelo':a.cat==='Trenes'?'Tren':'Otro');
 const catOf=a=>(a.cat==='Vuelos'||a.cat==='Trenes')?'Transportes':a.cat;
@@ -697,8 +698,11 @@ function sheetPlan(dia0,p,pre){ pre=pre||{};
    <a class="btn ghost sm" id="p-mp" target="_blank" rel="noopener">${ic('out',16)} Buscar sitio en Google Maps</a>
    <label class="f">Enlace de ubicación (opcional)<input class="in" id="p-u" type="url" inputmode="url" placeholder="Pega aquí el enlace de Google Maps" value="${esc(p.ubicacion||'')}"></label>
    <label class="f">Enlace web (opcional)<input class="in" id="p-l" type="url" inputmode="url" placeholder="https://…" value="${esc(webV)}"></label>
-   <label class="f">Documento ligado (opcional)<select class="in" id="p-a"><option value="">Ninguno</option>${S.archivos.map(a=>`<option value="${a.id}" ${a.id===p.archivoId?'selected':''}>${esc(a.titulo)}</option>`).join('')}</select></label>
+   <div class="f"><span>Documentos ligados (opcional)</span><div id="p-docs" class="stack" style="gap:8px"></div><button type="button" class="btn ghost sm" id="p-adddoc">${ic('plus',16)} Añadir documento</button></div>
    <button class="btn ams" id="p-ok">Guardar</button>${nuevo?'':`<button class="btn danger" id="p-del">${ic('trash',18)} Borrar plan</button>`}`);
+  const dOpts=sel=>`<option value="">Ninguno</option>${S.archivos.map(a=>`<option value="${a.id}" ${a.id===sel?'selected':''}>${esc(a.titulo)}</option>`).join('')}`;
+  const addDocSel=sel=>{ const w=document.createElement('div'); w.className='row'; w.style.gap='8px'; w.innerHTML=`<select class="in p-a" style="flex:1">${dOpts(sel)}</select><button type="button" class="iconbtn" aria-label="Quitar" style="flex:none">${ic('trash',18)}</button>`; w.querySelector('button').onclick=()=>w.remove(); $('#p-docs').appendChild(w); };
+  (pdocs(p).length?pdocs(p):['']).forEach(addDocSel); $('#p-adddoc').onclick=()=>addDocSel('');
   const pcity=()=>{ const c=(DAYS.find(z=>z.d===$('#p-dia').value)||{}).city; return c&&c!=='Vuelos'?c:''; };
   const setMp=()=>{ $('#p-mp').href='https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(($('#p-t').value.trim()||'')+' '+pcity()); }; setMp();
   $('#p-t').addEventListener('input',setMp); $('#p-dia').addEventListener('change',setMp);
@@ -706,7 +710,8 @@ function sheetPlan(dia0,p,pre){ pre=pre||{};
     const desc=$('#p-x').value.trim(); const fix=v=>{ v=v.trim(); return v&&!/^https?:\/\//i.test(v)?'https://'+v:v; }; const ubicacion=fix($('#p-u').value);
     const dia=$('#p-dia').value; const web=fix($('#p-l').value);
     let precio=$('#p-pr').value.trim(); if(/^\d+([.,]\d+)?$/.test(precio)) precio+=' €';
-    const data={dia,hora:$('#p-h').value,precio,titulo:t,desc,texto:t+(desc?'\n'+desc:''),ubicacion,web,enlace:web,lugar:p.lugar||'',archivoId:$('#p-a').value};
+    const data={dia,hora:$('#p-h').value,precio,titulo:t,desc,texto:t+(desc?'\n'+desc:''),ubicacion,web,enlace:web,lugar:p.lugar||'',archivoIds:[...new Set([...document.querySelectorAll('.p-a')].map(x=>x.value).filter(Boolean))]};
+    data.archivoId=data.archivoIds[0]||'';
     const ok=await dbDo(()=> nuevo ? F.addDoc(colRef('planes'),{...data,creado:Date.now()}) : F.setDoc(docRef('planes',p.id),{...data,orden:(p.dia===dia&&p.orden!=null)?p.orden:null,creado:p.creado||Date.now()}));
     if(ok){ closeSheet(); S.pd=dia; if(S.pick){ S.pick=null; S.tab='planes'; S.sub=null; render(); window.scrollTo(0,0);} else render(); } };
   if(!nuevo) $('#p-del').onclick=async()=>{ const ok=await dbDo(()=>F.deleteDoc(docRef('planes',p.id))); if(ok) closeSheet(); };
@@ -991,7 +996,7 @@ async function shrinkImage(file, maxBytes=MAXB, maxDim=1800){
 }
 async function sheetOpenDoc(id){
   const a=S.archivos.find(x=>x.id===id); if(!a) return;
-  openSheet(`${sheetHead(esc(a.titulo))}<div class="small muted">${esc(catOf(a))}${catOf(a)==='Transportes'?' · '+subOf(a):''}${a.link?'':' · '+esc(a.nombre||'')}</div>${S.planes.filter(p=>p.archivoId===id).map(p=>`<div class="small" style="font-weight:600">Plan: ${esc(fmtFecha(p.dia))}${p.hora?' · '+esc(p.hora):''} · ${esc(p.texto)}</div>`).join('')}<div id="d-body" class="stack"><div class="empty">Cargando…</div></div>
+  openSheet(`${sheetHead(esc(a.titulo))}<div class="small muted">${esc(catOf(a))}${catOf(a)==='Transportes'?' · '+subOf(a):''}${a.link?'':' · '+esc(a.nombre||'')}</div>${S.planes.filter(p=>pdocs(p).includes(id)).map(p=>`<div class="small" style="font-weight:600">Plan: ${esc(fmtFecha(p.dia))}${p.hora?' · '+esc(p.hora):''} · ${esc(p.texto)}</div>`).join('')}<div id="d-body" class="stack"><div class="empty">Cargando…</div></div>
    <div class="row" style="gap:8px"><label class="f" style="flex:1">Categoría<select class="in" id="d-ec">${CATS.map(c=>`<option ${c===catOf(a)?'selected':''}>${c}</option>`).join('')}</select></label><label class="f" id="d-esw" style="flex:1;${catOf(a)==='Transportes'?'':'display:none'}">Tipo<select class="in" id="d-es">${TSUBS.map(t=>`<option ${t===subOf(a)?'selected':''}>${t}</option>`).join('')}</select></label></div>
    <button class="btn danger" id="d-del">${ic('trash',18)} Borrar documento</button>`);
   const saveCls=async()=>{ const cat=$('#d-ec').value; $('#d-esw').style.display=cat==='Transportes'?'':'none'; const data={cat,sub:cat==='Transportes'?$('#d-es').value:null}; const ok=await dbDo(()=>F.setDoc(docRef('archivos',id),data,{merge:true})); if(ok) toast('Guardado ✓'); };
