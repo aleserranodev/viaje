@@ -603,8 +603,17 @@ function viewGastos(){
 
 /* ====================== render ====================== */
 function currentName(){ return S.sub || S.tab; }
+const NAVK=['tab','sub','city','meal','pd','gTab','tcity','ttipo','fcity','fday'];
+function navSave(){ try{ store.set('viaje.nav',JSON.stringify(Object.fromEntries(NAVK.map(k=>[k,S[k]])))); }catch(_){} }
+function navLoad(){ try{ const o=JSON.parse(store.get('viaje.nav')||'null'); if(!o) return;
+  if(['inicio','gastos','planes','comer','mas'].includes(o.tab)) S.tab=o.tab;
+  if(o.sub===null||['ruta','hoteles','docs','fotos','tiktoks','tiempo'].includes(o.sub)) S.sub=o.sub;
+  if(S.sub&&S.tab!=='mas') S.sub=null;
+  NAVK.slice(2).forEach(k=>{ if(typeof o[k]==='string') S[k]=o[k]; });
+}catch(_){} }
 function render(only){
   if(!S.code){ renderGate(); return; }
+  navSave();
   if(only && !only.includes(currentName())) { renderTabs(); return; }
   const v={inicio:viewInicio,ruta:()=>(S.sub==='ruta'?backRow():'')+viewRuta(),comer:viewComer,planes:viewPlanes,mas:viewMas,hoteles:viewHoteles,docs:viewDocs,fotos:viewFotos,tiktoks:viewTiktoks,tiempo:viewTiempo,gastos:viewGastos}[currentName()];
   const y=window.scrollY; $('#view').innerHTML=v(); if(currentName()==='comer') applyCq(); if(currentName()==='planes'){ const o=document.querySelector('.dtile.on'); if(o&&o.parentNode) o.parentNode.scrollLeft=o.offsetLeft-o.parentNode.clientWidth/2+o.offsetWidth/2; } renderTabs(); if(only) window.scrollTo(0,y);
@@ -1076,6 +1085,7 @@ window.addEventListener('online',()=>render()); window.addEventListener('offline
 
 /* ====================== arranque ====================== */
 (function(){ const p=new URLSearchParams(location.search); const c=p.get('c'); if(c&&c.length>=8){ S.code=c; store.set('viaje.code',c); history.replaceState(null,'',location.pathname); } })();
+navLoad();
 render();
 initFB();
 loadWx();
