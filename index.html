@@ -661,6 +661,13 @@ function sheetDev(p){
     const ok=await dbDo(()=> nuevo?F.addDoc(colRef('pagos'),data):F.setDoc(docRef('pagos',p.id),data)); if(ok) closeSheet(); };
   if(!nuevo) $('#dv-del').onclick=async()=>{ if(!confirm('¿Borrar esta devolución?')) return; const ok=await dbDo(()=>F.deleteDoc(docRef('pagos',p.id))); if(ok) closeSheet(); };
 }
+async function placeByHour(dia,pid,hora){
+  const rows=[]; S.planes.filter(p=>p.dia===dia&&p.id!==pid).forEach(p=>rows.push({k:'planes',id:p.id,h:p.hora||'',o:p.orden})); S.lugares.filter(l=>l.dia===dia).forEach(l=>rows.push({k:'lugares',id:l.id,h:'',o:l.orden}));
+  rows.sort((a,b)=>{ const ao=a.o!=null, bo=b.o!=null; if(ao&&bo) return a.o-b.o; if(ao!==bo) return ao?-1:1; return (a.h||'99').localeCompare(b.h||'99'); });
+  let idx=rows.length; for(let i=0;i<rows.length;i++){ if(rows[i].h&&rows[i].h>hora){ idx=i; break; } }
+  rows.splice(idx,0,{k:'planes',id:pid}); 
+  await Promise.all(rows.map((r,i)=>F.setDoc(docRef(r.k,r.id),{orden:i*10},{merge:true})));
+}
 function sheetPlanGasto(q){
   let pag='';
   openSheet(`${sheetHead('¿Añadir a gastos?')}
@@ -739,6 +746,7 @@ function sheetPlan(dia0,p,pre){ pre=pre||{};
     data.archivoId=data.archivoIds[0]||'';
     let pid=p.id; const keep=nuevo?{}:{gastoAsk:p.gastoAsk||null};
     const ok=await dbDo(async()=>{ if(nuevo){ const r=await F.addDoc(colRef('planes'),{...data,creado:Date.now()}); pid=r.id; } else await F.setDoc(docRef('planes',p.id),{...data,...keep,orden:(p.dia===dia&&p.orden!=null)?p.orden:null,creado:p.creado||Date.now()}); });
+    if(ok && data.hora && (nuevo||p.hora!==data.hora||p.dia!==dia)) await dbDo(()=>placeByHour(dia,pid,data.hora));
     if(ok){ closeSheet(); S.pd=dia; if(S.pick){ S.pick=null; S.tab='planes'; S.sub=null; render(); window.scrollTo(0,0);} else render();
       const imp=parseImporte(String(precio).replace(/€/g,'')); if(imp && p.gastoAsk!==precio) sheetPlanGasto({id:pid,titulo:t,dia,precio,imp}); } };
   if(!nuevo) $('#p-del').onclick=async()=>{ const ok=await dbDo(()=>F.deleteDoc(docRef('planes',p.id))); if(ok) closeSheet(); };
