@@ -909,6 +909,47 @@ function sheetAddFoto(files){
     S.fday=''; S.fcity=''; closeSheet(); if(!fail) toast(n+' foto'+(n===1?'':'s')+' subida'+(n===1?'':'s')+' ✓'); render(['fotos']);
   };
 }
+/* ---- visor de fotos (galería) ---- */
+const fotosList=()=>S.fotos.slice().sort((a,b)=>(b.creado||0)-(a.creado||0)).filter(f=>(!S.fcity||f.ciudad===S.fcity)&&(!S.fday||f.dia===S.fday));
+const LBC=new Map();
+async function lbUrl(f){ if(LBC.has(f.id)) return LBC.get(f.id); const sn=await F.getDoc(docRef('blobs','f-'+f.id)); if(!sn.exists()) throw new Error('nada'); const url=URL.createObjectURL(await (await fetch(sn.data().data)).blob()); LBC.set(f.id,url); return url; }
+function openLightbox(id){
+  let list=fotosList(); let i=list.findIndex(x=>x.id===id); if(i<0) return;
+  document.getElementById('lb')?.remove();
+  const el=document.createElement('div'); el.id='lb';
+  el.style.cssText='position:fixed;inset:0;z-index:300;background:#000;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none';
+  el.innerHTML=`<div id="lb-t" style="position:absolute;inset:0;display:flex;width:300%;will-change:transform"></div>
+   <div id="lb-top" style="position:absolute;left:0;right:0;top:0;padding:max(12px,env(safe-area-inset-top)) 14px 24px;display:none;align-items:center;justify-content:space-between;background:linear-gradient(#000a,#0000);color:#fff;z-index:2"><button id="lb-x" class="iconbtn" aria-label="Cerrar" style="background:#fff3;color:#fff">${ic('x')}</button><span id="lb-n" style="font-weight:700"></span><span style="width:44px"></span></div>
+   <div id="lb-bot" style="position:absolute;left:0;right:0;bottom:0;padding:24px 14px max(14px,env(safe-area-inset-bottom));display:none;gap:10px;background:linear-gradient(#0000,#000a);z-index:2"><a id="lb-dl" class="btn fly" style="flex:1">Descargar</a><button id="lb-del" class="btn danger" style="flex:1">Borrar</button></div>`;
+  document.body.appendChild(el);
+  const tr=el.querySelector('#lb-t'); let ctl=false;
+  const slide=(f,loadFull)=>{ const d=document.createElement('div'); d.style.cssText='width:33.3333%;height:100%;display:flex;align-items:center;justify-content:center;flex:none'; if(!f) return d;
+    const im=document.createElement('img'); im.src=f.thumb; im.style.cssText='max-width:100%;max-height:100%;object-fit:contain;pointer-events:none'+(loadFull?';filter:blur(2px)':''); im.draggable=false; d.appendChild(im);
+    lbUrl(f).then(u=>{ im.src=u; im.style.filter=''; }).catch(()=>{ if(loadFull){ const m=document.createElement('div'); m.style.cssText='position:absolute;color:#fff;bottom:90px;font-size:14px'; m.textContent='No se pudo cargar. ¿Hay conexión?'; d.appendChild(m); } }); return d; };
+  const build=()=>{ tr.style.transition='none'; tr.style.transform='translateX(-33.3333%)'; tr.innerHTML=''; [list[i-1],list[i],list[i+1]].forEach((f,k)=>tr.appendChild(slide(f,k===1)));
+    el.querySelector('#lb-n').textContent=(i+1)+' / '+list.length; const f=list[i]; const a=el.querySelector('#lb-dl'); a.removeAttribute('href'); lbUrl(f).then(u=>{ if(list[i]===f){ a.href=u; a.download='viaje-'+f.dia+'-'+f.id.slice(0,5)+'.jpg'; } }).catch(()=>{}); };
+  const setCtl=v=>{ ctl=v; el.querySelector('#lb-top').style.display=v?'flex':'none'; el.querySelector('#lb-bot').style.display=v?'flex':'none'; };
+  const close=()=>{ document.removeEventListener('keydown',key); el.remove(); };
+  const go=dir=>{ const ni=i+dir; if(ni<0||ni>=list.length){ tr.style.transition='transform .2s'; tr.style.transform='translateX(-33.3333%)'; return; }
+    tr.style.transition='transform .22s ease-out'; tr.style.transform='translateX('+(dir>0?'-66.6666%':'0')+')';
+    setTimeout(()=>{ i=ni; build(); },230); };
+  const key=e=>{ if(e.key==='Escape') close(); else if(e.key==='ArrowRight') go(1); else if(e.key==='ArrowLeft') go(-1); };
+  document.addEventListener('keydown',key);
+  let sx=0,sy=0,st=0,dx=0,mode='',busy=false;
+  el.addEventListener('pointerdown',e=>{ if(e.target.closest('button,a')) return; sx=e.clientX; sy=e.clientY; st=Date.now(); dx=0; mode='p'; el.setPointerCapture(e.pointerId); });
+  el.addEventListener('pointermove',e=>{ if(mode==='') return; dx=e.clientX-sx; const dy=e.clientY-sy;
+    if(mode==='p'&&Math.hypot(dx,dy)>10) mode=Math.abs(dx)>Math.abs(dy)?'h':'v';
+    if(mode==='h'){ const w=el.clientWidth; let d=dx; if((i===0&&d>0)||(i===list.length-1&&d<0)) d/=3; tr.style.transition='none'; tr.style.transform=`translateX(calc(-33.3333% + ${d}px))`; } });
+  el.addEventListener('pointerup',e=>{ const m=mode; mode=''; if(m==='p'&&Date.now()-st<400){ setCtl(!ctl); return; }
+    if(m==='h'){ const w=el.clientWidth; if(dx<-w*0.18) go(1); else if(dx>w*0.18) go(-1); else { tr.style.transition='transform .2s'; tr.style.transform='translateX(-33.3333%)'; } }
+    else if(m==='v'&&Math.abs(e.clientY-sy)>110) close(); });
+  el.addEventListener('pointercancel',()=>{ mode=''; tr.style.transition='transform .2s'; tr.style.transform='translateX(-33.3333%)'; });
+  el.querySelector('#lb-x').onclick=close;
+  el.querySelector('#lb-del').onclick=async()=>{ const f=list[i]; if(!confirm('¿Borrar esta foto para los dos?')) return;
+    const ok=await dbDo(async()=>{ await F.deleteDoc(docRef('fotos',f.id)); await F.deleteDoc(docRef('blobs','f-'+f.id)); });
+    if(!ok) return; list=list.filter(x=>x.id!==f.id); if(!list.length){ close(); return; } if(i>=list.length) i=list.length-1; build(); };
+  build();
+}
 async function sheetOpenFoto(id){
   const f=S.fotos.find(x=>x.id===id); if(!f) return;
   openSheet(`${sheetHead(esc(fmtFecha(f.dia))+' · '+esc(f.ciudad||''))}<div class="small muted">Subida por ${esc(f.autor||'')} · ${esc(new Date(f.creado||0).toLocaleString('es-ES',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}))}</div>
@@ -1080,7 +1121,7 @@ document.addEventListener('click', async e=>{
   else if(a==='mapall') openMapAll();
   else if(a==='mapclose'){ const o=$('#mapov'); if(o) o.remove(); }
   else if(a==='addfoto') pickFotos(!!el.dataset.g);
-  else if(a==='openfoto') sheetOpenFoto(el.dataset.id);
+  else if(a==='openfoto') openLightbox(el.dataset.id);
   else if(a==='addtt') sheetTt();
   else if(a==='opentt') sheetOpenTt(el.dataset.id);
   else if(a==='tcity'){ S.tcity=el.dataset.v; render(['tiktoks']); }
