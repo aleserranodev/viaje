@@ -1096,6 +1096,7 @@ window.addEventListener('online',()=>render()); window.addEventListener('offline
 /* ====================== arranque ====================== */
 (function(){ const p=new URLSearchParams(location.search); const c=p.get('c'); if(c&&c.length>=8){ S.code=c; store.set('viaje.code',c); history.replaceState(null,'',location.pathname); } })();
 navLoad();
+{ const t=todayStr(); if(S.code&&DAYS.some(x=>x.d===t)){ S.tab='planes'; S.sub=null; S.pd=t; } }
 render();
 initFB();
 loadWx();
