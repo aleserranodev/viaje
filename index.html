@@ -883,13 +883,13 @@ function viewFotos(){
   const list=all.filter(f=>(!S.fcity||f.ciudad===S.fcity)&&(!S.fday||f.dia===S.fday));
   const chip=(act,v,cur,label)=>`<button class="chip" data-act="${act}" data-v="${v}" style="cursor:pointer;border:1.5px solid ${cur===v?'var(--ink)':'transparent'};${cur===v?'font-weight:700;background:#fff':''}">${label}</button>`;
   const sel=S.fsel; const nsel=sel?list.filter(f=>sel.has(f.id)).length:0;
-  const bar=sel?`<div class="row" style="gap:8px;flex-wrap:wrap;position:sticky;top:0;z-index:5;background:var(--bg,#fff);padding:6px 0"><b style="flex:1;min-width:120px">${nsel} seleccionada${nsel===1?'':'s'}</b><button class="btn fly sm" data-act="fdlsel">Descargar</button><button class="btn danger sm" data-act="fdelsel">Borrar</button><button class="btn ghost sm" data-act="fselall">Todas</button><button class="btn ghost sm" data-act="fselx">Cancelar</button></div>`
+  const bar=sel?`<div class="row" style="gap:8px;flex-wrap:wrap;position:sticky;top:0;z-index:5;background:var(--bg,#fff);padding:6px 0"><b style="flex:1;min-width:120px">${nsel} seleccionada${nsel===1?'':'s'}</b><button class="btn fly sm" data-act="fdlsel">Descargar</button><button class="btn ams sm" data-act="sssel">Presentación</button><button class="btn danger sm" data-act="fdelsel">Borrar</button><button class="btn ghost sm" data-act="fselall">Todas</button><button class="btn ghost sm" data-act="fselx">Cancelar</button></div>`
    :`<div class="row" style="gap:8px"><button class="btn fly" data-act="addfoto" style="flex:1">${ic('camera')} Hacer foto</button><button class="btn ghost" data-act="addfoto" data-g="1" style="flex:1">${ic('plus')} Galería</button></div>`;
   return backBar('Fotos')+`<div class="pad stack-l">
   ${bar}
   <div class="stack" style="gap:8px"><div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:2px">${chip('fcity','',S.fcity,'Todas')}${FCITIES.map(c=>chip('fcity',c,S.fcity,c)).join('')}</div>
   ${days.length?`<div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:2px">${chip('fday','',S.fday,'Todos los días')}${days.map(d=>chip('fday',d,S.fday,esc(fmtFecha(d)))).join('')}</div>`:''}</div>
-  ${list.length?`<div class="fgrid">${list.map(f=>{ const on=sel&&sel.has(f.id); return `<button class="fph${on?' sel':''}" data-act="openfoto" data-id="${f.id}"><img src="${f.thumb}" alt="" loading="lazy" draggable="false"><span class="fcap">${esc(f.autor||'')}</span>${sel?`<span class="ck">${on?'✓':''}</span>`:''}</button>`; }).join('')}</div><div class="small muted" style="text-align:center">${list.length} foto${list.length===1?'':'s'}${sel?'':' · Mantén pulsada una para seleccionar'}</div>${!sel&&list.length?`<button class="btn ghost" data-act="fdlall">Descargar todas (${list.length})</button>`:''}${!sel&&all.length?`<button class="btn danger" data-act="fdelall">${ic('trash',18)} Borrar todas las fotos (${all.length})</button>`:''}`
+  ${list.length?`<div class="fgrid">${list.map(f=>{ const on=sel&&sel.has(f.id); return `<button class="fph${on?' sel':''}" data-act="openfoto" data-id="${f.id}"><img src="${f.thumb}" alt="" loading="lazy" draggable="false"><span class="fcap">${esc(f.autor||'')}</span>${sel?`<span class="ck">${on?'✓':''}</span>`:''}</button>`; }).join('')}</div><div class="small muted" style="text-align:center">${list.length} foto${list.length===1?'':'s'}${sel?'':' · Mantén pulsada una para seleccionar'}</div>${!sel&&list.length?`<button class="btn ams" data-act="ssplay">▶ Presentación (${list.length})</button><button class="btn ghost" data-act="fdlall">Descargar todas (${list.length})</button>`:''}${!sel&&all.length?`<button class="btn danger" data-act="fdelall">${ic('trash',18)} Borrar todas las fotos (${all.length})</button>`:''}`
    :`<div class="empty">${all.length?'No hay fotos con este filtro.':'Aún no hay fotos. Haz la primera.'}</div>`}</div>`;
 }
 function sheetAddFoto(files){
@@ -1000,6 +1000,98 @@ document.addEventListener('pointerdown',e=>{ const b=e.target.closest&&e.target.
   st.t=setTimeout(()=>{ st.done=true; if(!S.fsel) S.fsel=new Set(); S.fsel.add(b.dataset.id); try{ navigator.vibrate&&navigator.vibrate(25); }catch(_){} render(['fotos']); },450);
   document.addEventListener('pointermove',mv); document.addEventListener('pointerup',up); document.addEventListener('pointercancel',up);
 });
+/* ---- presentación de fotos ---- */
+function ssMusic(){
+  const AC=window.AudioContext||window.webkitAudioContext; if(!AC) return null; let ac; try{ ac=new AC(); }catch(_){ return null; } if(ac.state==='suspended') ac.resume();
+  const master=ac.createGain(); master.gain.value=0; master.connect(ac.destination); master.gain.setTargetAtTime(.5,ac.currentTime,1.5);
+  const len=Math.floor(ac.sampleRate*3.2), buf=ac.createBuffer(2,len,ac.sampleRate);
+  for(let c=0;c<2;c++){ const d=buf.getChannelData(c); for(let i=0;i<len;i++) d[i]=(Math.random()*2-1)*Math.pow(1-i/len,2.6); }
+  const conv=ac.createConvolver(); conv.buffer=buf; const wet=ac.createGain(); wet.gain.value=.7; conv.connect(wet); wet.connect(master);
+  const dry=ac.createGain(); dry.gain.value=.55; dry.connect(master); const bus=ac.createGain(); bus.connect(dry); bus.connect(conv);
+  const lp=ac.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=1600; lp.Q.value=.3; lp.connect(bus);
+  const dl=ac.createDelay(1); dl.delayTime.value=.46; const fb=ac.createGain(); fb.gain.value=.4; dl.connect(fb); fb.connect(dl); const dlo=ac.createGain(); dlo.gain.value=.5; dl.connect(dlo); dlo.connect(bus);
+  const hz=m=>440*Math.pow(2,(m-69)/12); const chords=[[48,55,59,62,64],[45,52,55,60,64],[41,48,52,57,60],[43,50,55,59,62]]; let ci=0;
+  const pad=()=>{ const t=ac.currentTime, ch=chords[ci++%chords.length], dur=9; ch.forEach((m,k)=>[-5,5].forEach(det=>{ const o=ac.createOscillator(); o.type=k%2?'sine':'triangle'; o.frequency.value=hz(m); o.detune.value=det; const g=ac.createGain(); g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(.032,t+2.8); g.gain.linearRampToValueAtTime(.026,t+dur-2.5); g.gain.linearRampToValueAtTime(0,t+dur+1.5); o.connect(g); g.connect(lp); o.start(t); o.stop(t+dur+1.7); })); };
+  const pent=[72,74,76,79,81,84,86];
+  const pluck=()=>{ const t=ac.currentTime, m=pent[Math.floor(Math.random()*pent.length)]; const o=ac.createOscillator(); o.type='sine'; o.frequency.value=hz(m); const g=ac.createGain(); g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(.06,t+.015); g.gain.exponentialRampToValueAtTime(.0008,t+2.4); o.connect(g); g.connect(bus); g.connect(dl); o.start(t); o.stop(t+2.6); };
+  pad(); const ip=setInterval(pad,8000); let tm; const loop=()=>{ pluck(); tm=setTimeout(loop,1200+Math.random()*2600); }; tm=setTimeout(loop,1800); let muted=false;
+  return { toggle(){ muted=!muted; master.gain.setTargetAtTime(muted?0:.5,ac.currentTime,.3); return muted; }, stop(){ clearInterval(ip); clearTimeout(tm); master.gain.setTargetAtTime(0,ac.currentTime,.4); setTimeout(()=>{ try{ ac.close(); }catch(_){} },1800); } };
+}
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+function ssScenes(photos){
+  const pick=a=>a[Math.floor(Math.random()*a.length)]; const seq=[{k:'intro',dur:4200}]; let i=0,last='';
+  while(i<photos.length){ const rem=photos.length-i; let o=['one','one','two','three'].filter(l=>l!==last&&(l==='one'||(l==='two'&&rem>=2)||(l==='three'&&rem>=3))); if(!o.length) o=['one']; const l=pick(o); const n=l==='one'?1:l==='two'?2:3;
+    seq.push({k:'photos',l,fs:photos.slice(i,i+n),dur:l==='one'?4800:l==='two'?5600:6400}); i+=n; last=l; }
+  seq.push({k:'outro',dur:4200,n:photos.length}); return seq;
+}
+function ssPrep(sc){ if(sc.p) return sc.p; sc.p=Promise.all(sc.fs.map(async f=>{ let u; try{ u=await lbUrl(f); }catch(_){ u=f.thumb; } const im=new Image(); im.src=u; try{ await im.decode(); }catch(_){} return {u,w:im.naturalWidth||4,h:im.naturalHeight||3}; })); return sc.p; }
+const SS_TR=[
+  ()=>[{opacity:0},{opacity:1}],
+  (i,P)=>{ const s=(i%2?-1:1)*14; return [{opacity:0,transform:P?`translateY(${s}vh)`:`translateX(${s}vw)`},{opacity:1,transform:'none'}]; },
+  ()=>[{opacity:0,transform:'scale(1.18)'},{opacity:1,transform:'none'}],
+  ()=>[{opacity:0,clipPath:'inset(0 100% 0 0)'},{opacity:1,clipPath:'inset(0 0 0 0)'}],
+  i=>[{opacity:0,transform:`translateY(9vh) rotate(${i%2?-2.5:2.5}deg) scale(.94)`},{opacity:1,transform:'none'}]
+];
+function ssRender(sc,data){
+  const d=document.createElement('div'); d.style.cssText='position:absolute;inset:0;overflow:hidden'; const P=innerHeight>innerWidth; const rnd=a=>a[Math.floor(Math.random()*a.length)];
+  if(sc.k!=='photos'){ d.style.background='radial-gradient(120% 90% at 30% 20%,#4a2c1a,#15100c)';
+    d.innerHTML=sc.k==='intro'?`<div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;text-align:center;padding:24px;color:#FBF7F2"><div class="ss-t" style="font-family:Georgia,'Times New Roman',serif;font-style:italic;font-size:clamp(34px,9vmin,72px);line-height:1.1">Viaje noviembre 2026</div><div class="ss-t" style="letter-spacing:.28em;text-transform:uppercase;font-size:clamp(11px,2.2vmin,16px);opacity:.8">Ámsterdam · Brujas · Gante · Bruselas</div></div>`
+      :`<div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;padding:24px;color:#FBF7F2"><div class="ss-t" style="font-family:Georgia,'Times New Roman',serif;font-style:italic;font-size:clamp(40px,11vmin,84px)">Fin</div><div class="ss-t" style="letter-spacing:.28em;text-transform:uppercase;font-size:clamp(11px,2.2vmin,16px);opacity:.8">${sc.n} foto${sc.n===1?'':'s'} · 13–21 nov</div></div>`;
+    [...d.querySelectorAll('.ss-t')].forEach((t,i)=>t.animate([{opacity:0,transform:'translateY(14px)'},{opacity:1,transform:'none'}],{duration:1200,delay:300+i*500,easing:'cubic-bezier(.2,.7,.2,1)',fill:'both'})); return d; }
+  const bg=document.createElement('div'); bg.style.cssText=`position:absolute;inset:-8%;background:center/cover url("${data[0].u}");filter:blur(38px) brightness(.42) saturate(1.25)`; d.appendChild(bg);
+  const vg=document.createElement('div'); vg.style.cssText='position:absolute;inset:0;background:radial-gradient(120% 100% at 50% 40%,transparent 45%,rgba(0,0,0,.5))'; d.appendChild(vg);
+  const pr=data[0].h>data[0].w; const full=sc.l==='one'&&(pr===P);
+  const grid=document.createElement('div'); const gap='clamp(8px,2vmin,18px)'; const pad=full?'0':'clamp(12px,4vmin,34px)';
+  let cols='1fr',rows='1fr'; if(sc.l==='two'){ if(P) rows='1fr 1fr'; else cols='1fr 1fr'; } if(sc.l==='three'){ if(P){ rows='3fr 2fr'; cols='1fr 1fr'; } else { cols='3fr 2fr'; rows='1fr 1fr'; } }
+  grid.style.cssText=`position:absolute;${full?'inset:0':`top:${pad};left:${pad};right:${pad};bottom:calc(${pad} + clamp(22px,4.5vmin,34px))`};display:grid;gap:${gap};grid-template-columns:${cols};grid-template-rows:${rows}`; d.appendChild(grid);
+  data.forEach((it,i)=>{ const cell=document.createElement('div'); let st='overflow:hidden;min-width:0;min-height:0;position:relative;';
+    if(sc.l==='three'&&i===0) st+=P?'grid-column:1/3;':'grid-row:1/3;';
+    const framed=sc.l==='one'&&!full; const img=document.createElement('img'); img.src=it.u; img.draggable=false;
+    if(framed){ st+='display:flex;align-items:center;justify-content:center;'; img.style.cssText='max-width:100%;max-height:100%;border-radius:18px;box-shadow:0 18px 50px #0008;display:block'; }
+    else { st+=(full?'':'border-radius:18px;box-shadow:0 14px 40px #0007;'); img.style.cssText='width:100%;height:100%;object-fit:cover;display:block'; }
+    cell.style.cssText=st; cell.appendChild(img); grid.appendChild(cell);
+    cell.animate(rnd(SS_TR)(i,P),{duration:1000,delay:i*320,easing:'cubic-bezier(.2,.7,.2,1)',fill:'both'});
+    img.animate([{transform:'scale(1)'},{transform:`scale(${1.05+Math.random()*.06}) translate(${(Math.random()-.5)*3}%,${(Math.random()-.5)*3}%)`}],{duration:sc.dur+1800,easing:'ease-in-out',fill:'forwards'}); });
+  const f=sc.fs[0]; const cap=document.createElement('div'); cap.textContent=fmtFecha(f.dia)+(f.ciudad?' · '+f.ciudad:'');
+  cap.style.cssText="position:absolute;left:clamp(16px,4vmin,34px);bottom:max(16px,env(safe-area-inset-bottom));color:#fff;font-family:Georgia,'Times New Roman',serif;font-style:italic;font-size:clamp(15px,2.8vmin,22px);text-shadow:0 2px 12px #000a;letter-spacing:.02em";
+  d.appendChild(cap); cap.animate([{opacity:0,transform:'translateY(8px)'},{opacity:1,transform:'none'}],{duration:900,delay:700,fill:'both'}); return d;
+}
+function openPresentacion(list){
+  if(!list.length){ toast('No hay fotos para la presentación.'); return; }
+  const photos=list.slice().sort((a,b)=>String(a.dia).localeCompare(String(b.dia))||(a.creado||0)-(b.creado||0)); const music=ssMusic();
+  document.getElementById('ss')?.remove();
+  const el=document.createElement('div'); el.id='ss'; el.style.cssText='position:fixed;inset:0;z-index:320;background:#000;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none';
+  el.innerHTML=`<div id="ss-st" style="position:absolute;inset:0"></div><div id="ss-bar" style="position:absolute;left:0;bottom:0;height:3px;background:#fff8;width:0;transition:width .6s;z-index:3"></div>
+   <div id="ss-ct" style="position:absolute;left:0;right:0;top:0;padding:max(12px,env(safe-area-inset-top)) 12px 28px;display:flex;gap:8px;justify-content:flex-end;background:linear-gradient(#000a,#0000);z-index:4;opacity:0;transition:opacity .3s;pointer-events:none">
+    <button data-b="x" class="iconbtn" style="background:#fff3;color:#fff;margin-right:auto" aria-label="Cerrar">${ic('x')}</button>
+    <button data-b="p" class="iconbtn" style="background:#fff3;color:#fff;font-size:18px" aria-label="Pausa">⏸</button>
+    ${music?`<button data-b="m" class="iconbtn" style="background:#fff3;color:#fff;font-size:18px" aria-label="Sonido">♪</button>`:''}
+    ${(el.requestFullscreen||el.webkitRequestFullscreen||document.documentElement.requestFullscreen||document.documentElement.webkitRequestFullscreen)?`<button data-b="f" class="iconbtn" style="background:#fff3;color:#fff;font-size:18px" aria-label="Pantalla completa">⤢</button>`:''}</div>`;
+  document.body.appendChild(el);
+  const stage=el.querySelector('#ss-st'), ct=el.querySelector('#ss-ct'), bar=el.querySelector('#ss-bar'); const seq=ssScenes(photos);
+  let alive=true, paused=false, skip=0, cur=null, hideT=0, wl=null;
+  const showCt=()=>{ ct.style.opacity=1; ct.style.pointerEvents='auto'; clearTimeout(hideT); hideT=setTimeout(()=>{ ct.style.opacity=0; ct.style.pointerEvents='none'; },3200); };
+  const fsEl=document.documentElement; const rf=el.requestFullscreen||el.webkitRequestFullscreen;
+  if(rf){ try{ const r=rf.call(el); if(r&&r.catch) r.catch(()=>{}); }catch(_){} }
+  try{ if(navigator.wakeLock) navigator.wakeLock.request('screen').then(l=>{ wl=l; if(!alive) l.release(); }).catch(()=>{}); }catch(_){}
+  const close=()=>{ if(!alive) return; alive=false; document.removeEventListener('keydown',key); try{ music&&music.stop(); }catch(_){} try{ if(document.fullscreenElement) document.exitFullscreen(); else if(document.webkitFullscreenElement) document.webkitExitFullscreen(); }catch(_){} try{ wl&&wl.release(); }catch(_){} clearTimeout(hideT); el.remove(); };
+  const setPause=v=>{ paused=v; el.querySelector('[data-b=p]').textContent=v?'▶':'⏸'; el.getAnimations({subtree:true}).forEach(a=>{ try{ v?a.pause():a.play(); }catch(_){} }); };
+  const key=e=>{ if(e.key==='Escape') close(); else if(e.key==='ArrowRight') skip=1; else if(e.key==='ArrowLeft') skip=-1; else if(e.key===' '){ e.preventDefault(); setPause(!paused); } };
+  document.addEventListener('keydown',key);
+  let sx=0,sy=0; el.addEventListener('pointerdown',e=>{ if(e.target.closest('button')) return; sx=e.clientX; sy=e.clientY; });
+  el.addEventListener('pointerup',e=>{ if(e.target.closest('button')) return; const dx=e.clientX-sx, dy=e.clientY-sy; if(Math.abs(dx)>50&&Math.abs(dx)>Math.abs(dy)){ skip=dx<0?1:-1; return; } if(Math.hypot(dx,dy)>12) return; const r=e.clientX/innerWidth; if(r>.78) skip=1; else if(r<.22) skip=-1; else showCt(); });
+  ct.addEventListener('click',e=>{ const b=e.target.closest('button'); if(!b) return; showCt(); const k=b.dataset.b;
+    if(k==='x') close(); else if(k==='p') setPause(!paused); else if(k==='m'){ const m=music.toggle(); b.style.opacity=m?.45:1; }
+    else if(k==='f'){ try{ if(document.fullscreenElement||document.webkitFullscreenElement){ (document.exitFullscreen||document.webkitExitFullscreen).call(document); } else { (el.requestFullscreen||el.webkitRequestFullscreen||fsEl.requestFullscreen||fsEl.webkitRequestFullscreen).call(el.requestFullscreen||el.webkitRequestFullscreen?el:fsEl); } }catch(_){} } });
+  setTimeout(()=>{ if(alive) showCt(); },600);
+  (async()=>{ let idx=0; ssPrep(seq[1]||seq[0]);
+    while(alive){ const sc=seq[idx]; let data=null; if(sc.k==='photos') data=await ssPrep(sc); if(!alive) break;
+      const prev=cur; cur=ssRender(sc,data); cur.style.opacity=1; stage.appendChild(cur); if(paused) cur.getAnimations({subtree:true}).forEach(a=>{ try{ a.pause(); }catch(_){} });
+      if(prev){ const an=prev.animate([{opacity:1},{opacity:0}],{duration:900,fill:'forwards'}); an.onfinish=()=>prev.remove(); }
+      bar.style.width=((idx+1)/seq.length*100)+'%'; if(seq[idx+1]&&seq[idx+1].k==='photos') ssPrep(seq[idx+1]); if(seq[idx+2]&&seq[idx+2].k==='photos') ssPrep(seq[idx+2]);
+      let t=0; while(alive&&!skip&&t<sc.dur){ await sleep(100); if(!paused) t+=100; }
+      if(skip){ idx=Math.max(0,Math.min(seq.length-1,idx+skip)); skip=0; } else idx=(idx+1)%seq.length; } })();
+}
 /* ---- visor de fotos (galería) ---- */
 const fotosList=()=>S.fotos.slice().sort((a,b)=>(b.creado||0)-(a.creado||0)).filter(f=>(!S.fcity||f.ciudad===S.fcity)&&(!S.fday||f.dia===S.fday));
 const LBC=new Map();
@@ -1240,6 +1332,8 @@ document.addEventListener('click', async e=>{
   else if(a==='fselall'){ S.fsel=new Set(fotosList().map(f=>f.id)); render(['fotos']); }
   else if(a==='fdlsel'){ const l=fotosList().filter(f=>S.fsel&&S.fsel.has(f.id)); descargarFotos(l); }
   else if(a==='fdlall') descargarFotos(fotosList());
+  else if(a==='ssplay') openPresentacion(fotosList());
+  else if(a==='sssel') openPresentacion(S.fotos.filter(f=>S.fsel&&S.fsel.has(f.id)));
   else if(a==='fdelsel'){ const l=S.fotos.filter(f=>S.fsel&&S.fsel.has(f.id)); if(l.length&&confirm('¿Borrar '+l.length+' foto'+(l.length===1?'':'s')+' para los dos? No se puede deshacer.')) borrarFotos(l); }
   else if(a==='fdelall'){ const l=S.fotos.slice(); if(l.length&&confirm('¿Borrar TODAS las fotos ('+l.length+') para los dos? Incluye las que subió el otro móvil. No se puede deshacer.')&&confirm('Última confirmación: se borrarán las '+l.length+' fotos de la app. ¿Seguro?')) borrarFotos(l); }
   else if(a==='addtt') sheetTt();
