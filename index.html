@@ -901,19 +901,36 @@ function sheetAddFoto(files){
    <button class="btn fly" id="f-ok">Subir</button>`);
   $('#f-d').onchange=()=>{ const c=cityOfDay($('#f-d').value); if(c) $('#f-c').value=c; };
   $('#f-ok').onclick=async()=>{
-    const dia=$('#f-d').value, ciudad=$('#f-c').value; const btn=$('#f-ok'); btn.disabled=true; let n=0, fail=0;
-    for(const file of files){
-      $('#f-m').textContent=`Subiendo ${n+fail+1} de ${files.length}…`;
-      try{
-        const {chunks,thumb}=await prepOriginal(file);
-        const ok=await dbDo(async()=>{ const ref=await F.addDoc(colRef('fotos'),{dia,ciudad,autor:S.yo,creado:Date.now()+n,thumb,n:chunks.length}); await putChunks(ref.id,chunks); });
-        ok?n++:fail++;
-      }catch(e){ console.error(e); fail++; }
-    }
-    if(fail){ btn.disabled=false; $('#f-m').textContent=''; toast(`${n} subida${n===1?'':'s'}, ${fail} con error.`); if(!n) return; }
-    S.fday=''; S.fcity=''; closeSheet(); if(!fail) toast(n+' foto'+(n===1?'':'s')+' subida'+(n===1?'':'s')+' ✓'); render(['fotos']);
+    const dia=$('#f-d').value, ciudad=$('#f-c').value; $('#f-ok').disabled=true; $('#f-m').textContent='Guardando en la cola…';
+    await qEnqueue(files,dia,ciudad); S.fday=''; S.fcity=''; closeSheet(); toast('Subiendo en segundo plano. Puedes seguir usando la app.'); render(['fotos']); qRun();
   };
 }
+/* ---- cola de subida persistente (sigue al reabrir la app) ---- */
+const IDBQ={ db:null,
+  open(){ return this.db||(this.db=new Promise((res,rej)=>{ const r=indexedDB.open('viaje-cola',1); r.onupgradeneeded=()=>r.result.createObjectStore('q',{keyPath:'qid'}); r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error); })); },
+  async tx(mode,fn){ const d=await this.open(); return new Promise((res,rej)=>{ const t=d.transaction('q',mode); const o=fn(t.objectStore('q')); t.oncomplete=()=>res(o&&o.result); t.onerror=()=>rej(t.error); t.onabort=()=>rej(t.error); }); } };
+const MEMQ=[]; let QRUN=false;
+async function qSave(it){ try{ await IDBQ.tx('readwrite',s=>s.put(it)); }catch(e){ if(!MEMQ.includes(it)) MEMQ.push(it); } }
+async function qDel(it){ const k=MEMQ.indexOf(it); if(k>=0) MEMQ.splice(k,1); try{ await IDBQ.tx('readwrite',s=>s.delete(it.qid)); }catch(_){} }
+async function qAll(){ let a=[]; try{ a=await IDBQ.tx('readonly',s=>s.getAll())||[]; }catch(_){} return [...a,...MEMQ.filter(m=>!a.some(x=>x.qid===m.qid))].sort((x,y)=>x.creado-y.creado); }
+async function qEnqueue(files,dia,ciudad){ const t=Date.now(); let i=0; for(const file of files){ await qSave({qid:t+'-'+(i)+'-'+Math.random().toString(36).slice(2,7),file,dia,ciudad,autor:S.yo,creado:t+i,refId:null,fails:0}); i++; } }
+function qBar(n,msg){ let b=document.getElementById('qbar');
+  if(!n){ if(b) b.remove(); return; }
+  if(!b){ b=document.createElement('div'); b.id='qbar'; b.style.cssText='position:fixed;left:12px;right:12px;top:calc(8px + env(safe-area-inset-top));z-index:250;background:var(--ink);color:#fff;border-radius:14px;padding:10px 14px;font-size:14px;font-weight:600;box-shadow:0 6px 20px #0004;text-align:center;pointer-events:none'; document.body.appendChild(b); }
+  b.textContent=msg||('Subiendo fotos… quedan '+n); }
+async function qRun(){ if(QRUN) return; QRUN=true; let done=0, lost=0;
+  try{ for(;;){ const items=await qAll(); qBar(items.length); if(!items.length) break;
+      if(!S.dbReady||!navigator.onLine){ qBar(items.length,'Fotos pendientes: esperando conexión…'); await new Promise(r=>setTimeout(r,4000)); continue; }
+      const it=items[0];
+      try{ const {chunks,thumb}=await prepOriginal(it.file); let id=it.refId;
+        if(!id){ const ref=await F.addDoc(colRef('fotos'),{dia:it.dia,ciudad:it.ciudad,autor:it.autor,creado:it.creado,thumb,n:chunks.length}); id=ref.id; it.refId=id; await qSave(it); }
+        await putChunks(id,chunks); await qDel(it); done++;
+      }catch(e){ console.error(e); it.fails=(it.fails||0)+1;
+        if(it.fails>=5){ await qDel(it); lost++; if(it.refId){ try{ await F.deleteDoc(docRef('fotos',it.refId)); await delChunks(it.refId,20); }catch(_){} } }
+        else { await qSave(it); await new Promise(r=>setTimeout(r,3000)); } } }
+  } finally{ QRUN=false; qBar(0); }
+  if(done) toast(done+' foto'+(done===1?'':'s')+' subida'+(done===1?'':'s')+' ✓'); if(lost) toast(lost+' foto'+(lost===1?'':'s')+' no se pudo'+(lost===1?'':'ron')+' subir. Vuelve a intentarlo.'); }
+window.addEventListener('online',()=>qRun());
 /* ---- fotos en calidad original (troceadas en la base de datos) ---- */
 async function prepOriginal(file){
   const th=await shrinkImage(file,40*1024,360); let src=file;
@@ -1240,6 +1257,7 @@ navLoad();
 { const t=todayStr(); let nt='navigate'; try{ nt=(performance.getEntriesByType('navigation')[0]||{}).type||'navigate'; }catch(_){} const recarga=(nt==='reload'||nt==='back_forward'); if(!recarga&&S.code&&DAYS.some(x=>x.d===t)){ S.tab='planes'; S.sub=null; S.pd=t; } }
 render();
 initFB();
+setTimeout(qRun,1500);
 loadWx();
 if('serviceWorker' in navigator){ window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{})); }
 </script>
