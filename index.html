@@ -42,6 +42,9 @@ h1,h2,h3{margin:0;font-family:'Space Grotesk','Inter',sans-serif;letter-spacing:
 .fgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:4px}
 .fph{position:relative;aspect-ratio:1;border:0;padding:0;border-radius:10px;overflow:hidden;background:var(--soft);cursor:pointer}
 .fph img{width:100%;height:100%;object-fit:cover;display:block}
+.fph{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+.fph.sel{outline:3px solid var(--ink);outline-offset:-3px}
+.fph .ck{position:absolute;top:6px;right:6px;width:24px;height:24px;border-radius:12px;background:#fff;color:var(--ink);display:flex;align-items:center;justify-content:center;border:2px solid var(--ink);font-weight:800;font-size:14px}
 .fcap{position:absolute;left:4px;bottom:4px;background:rgba(0,0,0,.55);color:#fff;font-size:10px;padding:1px 6px;border-radius:8px}
 .chip{display:inline-flex;align-items:center;gap:6px;background:var(--soft);color:#3D352C;font-size:13px;line-height:18px;font-weight:500;padding:5px 10px;border-radius:14px}
 .chip.price{background:var(--ams-soft);color:var(--ams-ink);font-weight:600}
@@ -217,7 +220,7 @@ const S = {
   yo: normP(store.get('viaje.yo')) || 'Alejandro',
   lugares:[], gTab:'lista',
   gastos: DATA.gastos.lineas.map((l,i)=>({id:'g'+(i+1), fecha:l[0], concepto:l[1], total:Math.round(l[2]*100), pagador:'Cristina', local:true, orden:i})),
-  marcas:{}, planes:[], archivos:[], fotos:[], tiktoks:[], tcity:'', ttipo:'', pagos:[], wx:null, wxAt:0, fday:'', fcity:'', config:{},
+  marcas:{}, planes:[], archivos:[], fotos:[], fsel:null, tiktoks:[], tcity:'', ttipo:'', pagos:[], wx:null, wxAt:0, fday:'', fcity:'', config:{},
   online:false, dbReady:false
 };
 const CITYC = {'Ámsterdam':'var(--ams)','Brujas':'var(--bru)','Gante':'var(--bru)','Bruselas':'var(--bxl)'};
@@ -879,11 +882,14 @@ function viewFotos(){
   const days=[...new Set(all.map(f=>f.dia))].sort();
   const list=all.filter(f=>(!S.fcity||f.ciudad===S.fcity)&&(!S.fday||f.dia===S.fday));
   const chip=(act,v,cur,label)=>`<button class="chip" data-act="${act}" data-v="${v}" style="cursor:pointer;border:1.5px solid ${cur===v?'var(--ink)':'transparent'};${cur===v?'font-weight:700;background:#fff':''}">${label}</button>`;
+  const sel=S.fsel; const nsel=sel?list.filter(f=>sel.has(f.id)).length:0;
+  const bar=sel?`<div class="row" style="gap:8px;flex-wrap:wrap;position:sticky;top:0;z-index:5;background:var(--bg,#fff);padding:6px 0"><b style="flex:1;min-width:120px">${nsel} seleccionada${nsel===1?'':'s'}</b><button class="btn fly sm" data-act="fdlsel">Descargar</button><button class="btn ghost sm" data-act="fselall">Todas</button><button class="btn ghost sm" data-act="fselx">Cancelar</button></div>`
+   :`<div class="row" style="gap:8px"><button class="btn fly" data-act="addfoto" style="flex:1">${ic('camera')} Hacer foto</button><button class="btn ghost" data-act="addfoto" data-g="1" style="flex:1">${ic('plus')} Galería</button></div>`;
   return backBar('Fotos')+`<div class="pad stack-l">
-  <div class="row" style="gap:8px"><button class="btn fly" data-act="addfoto" style="flex:1">${ic('camera')} Hacer foto</button><button class="btn ghost" data-act="addfoto" data-g="1" style="flex:1">${ic('plus')} Galería</button></div>
+  ${bar}
   <div class="stack" style="gap:8px"><div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:2px">${chip('fcity','',S.fcity,'Todas')}${FCITIES.map(c=>chip('fcity',c,S.fcity,c)).join('')}</div>
   ${days.length?`<div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:2px">${chip('fday','',S.fday,'Todos los días')}${days.map(d=>chip('fday',d,S.fday,esc(fmtFecha(d)))).join('')}</div>`:''}</div>
-  ${list.length?`<div class="fgrid">${list.map(f=>`<button class="fph" data-act="openfoto" data-id="${f.id}"><img src="${f.thumb}" alt="" loading="lazy"><span class="fcap">${esc(f.autor||'')}</span></button>`).join('')}</div><div class="small muted" style="text-align:center">${list.length} foto${list.length===1?'':'s'}</div>`
+  ${list.length?`<div class="fgrid">${list.map(f=>{ const on=sel&&sel.has(f.id); return `<button class="fph${on?' sel':''}" data-act="openfoto" data-id="${f.id}"><img src="${f.thumb}" alt="" loading="lazy" draggable="false"><span class="fcap">${esc(f.autor||'')}</span>${sel?`<span class="ck">${on?'✓':''}</span>`:''}</button>`; }).join('')}</div><div class="small muted" style="text-align:center">${list.length} foto${list.length===1?'':'s'}${sel?'':' · Mantén pulsada una para seleccionar'}</div>${!sel&&list.length?`<button class="btn ghost" data-act="fdlall">Descargar todas (${list.length})</button>`:''}`
    :`<div class="empty">${all.length?'No hay fotos con este filtro.':'Aún no hay fotos. Haz la primera.'}</div>`}</div>`;
 }
 function sheetAddFoto(files){
@@ -899,7 +905,7 @@ function sheetAddFoto(files){
     for(const file of files){
       $('#f-m').textContent=`Subiendo ${n+fail+1} de ${files.length}…`;
       try{
-        const full=await shrinkImage(file,300*1024,1280), th=await shrinkImage(file,40*1024,360);
+        const full=await shrinkImage(file,700*1024,2560,.92), th=await shrinkImage(file,40*1024,360);
         const [data,thumb]=await Promise.all([toDataURL(full),toDataURL(th)]);
         const ok=await dbDo(async()=>{ const ref=await F.addDoc(colRef('fotos'),{dia,ciudad,autor:S.yo,creado:Date.now()+n,thumb}); await F.setDoc(docRef('blobs','f-'+ref.id),{data}); });
         ok?n++:fail++;
@@ -909,6 +915,50 @@ function sheetAddFoto(files){
     S.fday=''; S.fcity=''; closeSheet(); if(!fail) toast(n+' foto'+(n===1?'':'s')+' subida'+(n===1?'':'s')+' ✓'); render(['fotos']);
   };
 }
+/* ---- descarga de fotos (sin tocar la calidad guardada) ---- */
+const CRCT=(()=>{ const t=new Uint32Array(256); for(let n=0;n<256;n++){ let c=n; for(let k=0;k<8;k++) c=c&1?0xEDB88320^(c>>>1):c>>>1; t[n]=c>>>0; } return t; })();
+const crc32=u=>{ let c=0xFFFFFFFF; for(let i=0;i<u.length;i++) c=CRCT[(c^u[i])&255]^(c>>>8); return (c^0xFFFFFFFF)>>>0; };
+function makeZip(files){
+  const enc=new TextEncoder(), parts=[], cen=[]; let off=0; const d=new Date(); const tm=(d.getHours()<<11)|(d.getMinutes()<<5)|(d.getSeconds()>>1), dt=((d.getFullYear()-1980)<<9)|((d.getMonth()+1)<<5)|d.getDate();
+  files.forEach(f=>{ const nm=enc.encode(f.name), crc=crc32(f.data), sz=f.data.length;
+    const lh=new DataView(new ArrayBuffer(30)); lh.setUint32(0,0x04034b50,true); lh.setUint16(4,20,true); lh.setUint16(6,0x0800,true); lh.setUint16(8,0,true); lh.setUint16(10,tm,true); lh.setUint16(12,dt,true); lh.setUint32(14,crc,true); lh.setUint32(18,sz,true); lh.setUint32(22,sz,true); lh.setUint16(26,nm.length,true); lh.setUint16(28,0,true);
+    parts.push(lh.buffer,nm,f.data);
+    const ch=new DataView(new ArrayBuffer(46)); ch.setUint32(0,0x02014b50,true); ch.setUint16(4,20,true); ch.setUint16(6,20,true); ch.setUint16(8,0x0800,true); ch.setUint16(10,0,true); ch.setUint16(12,tm,true); ch.setUint16(14,dt,true); ch.setUint32(16,crc,true); ch.setUint32(20,sz,true); ch.setUint32(24,sz,true); ch.setUint16(28,nm.length,true); ch.setUint32(42,off,true);
+    cen.push(ch.buffer,nm); off+=30+nm.length+sz; });
+  const csz=cen.reduce((a,b)=>a+(b.byteLength??b.length),0); const end=new DataView(new ArrayBuffer(22)); end.setUint32(0,0x06054b50,true); end.setUint16(8,files.length,true); end.setUint16(10,files.length,true); end.setUint32(12,csz,true); end.setUint32(16,off,true);
+  return new Blob([...parts,...cen,end.buffer],{type:'application/zip'});
+}
+async function descargarFotos(list){
+  if(!list.length) return; let stop=false;
+  openSheet(`${sheetHead('Descargar '+list.length+' foto'+(list.length===1?'':'s'))}<div class="small muted" id="dl-m" style="text-align:left">Preparando…</div><div id="dl-b" class="stack"></div>`);
+  const files=[]; const bytes=[];
+  try{
+    for(let n=0;n<list.length;n++){ if(!$('#dl-m')){ stop=true; break; } $('#dl-m').textContent=`Preparando ${n+1} de ${list.length}…`;
+      const f=list[n]; const sn=await F.getDoc(docRef('blobs','f-'+f.id)); if(!sn.exists()) continue;
+      const blob=await (await fetch(sn.data().data)).blob(); const name=`viaje_${f.dia}_${(f.ciudad||'').normalize('NFD').replace(/[̀-ͯ]/g,'')}_${String(n+1).padStart(2,'0')}.jpg`;
+      files.push(new File([blob],name,{type:blob.type||'image/jpeg'})); bytes.push(new Uint8Array(await blob.arrayBuffer())); }
+  }catch(e){ console.error(e); }
+  if(stop||!$('#dl-m')) return;
+  if(!files.length){ $('#dl-m').textContent='No se pudieron cargar las fotos. ¿Hay conexión?'; return; }
+  $('#dl-m').textContent=`${files.length} foto${files.length===1?'':'s'} lista${files.length===1?'':'s'}. Se guardan tal cual están en la app, sin recomprimir.`;
+  const canShare=!!(navigator.canShare&&navigator.canShare({files}));
+  $('#dl-b').innerHTML=`${canShare?`<button class="btn fly" id="dl-sh">Guardar en el móvil (galería)</button>`:''}${files.length===1?`<a class="btn ${canShare?'ghost':'fly'}" id="dl-one">Descargar foto</a>`:`<button class="btn ${canShare?'ghost':'fly'}" id="dl-zip">Descargar ZIP con todas</button>`}`;
+  if(canShare) $('#dl-sh').onclick=()=>{ navigator.share({files}).then(()=>{ closeSheet(); S.fsel=null; render(['fotos']); }).catch(e=>{ if(e&&e.name!=='AbortError') toast('No se pudo abrir el menú de guardar.'); }); };
+  const url=URL.createObjectURL(files.length===1?files[0]:makeZip(files.map((f,i)=>({name:f.name,data:bytes[i]}))));
+  const a=files.length===1?$('#dl-one'):null;
+  if(a){ a.href=url; a.download=files[0].name; }
+  else $('#dl-zip').onclick=()=>{ const l=document.createElement('a'); l.href=url; l.download='viaje-fotos.zip'; document.body.appendChild(l); l.click(); l.remove(); };
+}
+let LP=null;
+document.addEventListener('contextmenu',e=>{ if(e.target.closest&&e.target.closest('.fph')) e.preventDefault(); });
+document.addEventListener('pointerdown',e=>{ const b=e.target.closest&&e.target.closest('.fph'); if(!b) return; if(e.pointerType==='mouse'&&e.button!==0) return;
+  const st={x:e.clientX,y:e.clientY,done:false,t:0}; LP=st;
+  const end=()=>{ clearTimeout(st.t); document.removeEventListener('pointermove',mv); document.removeEventListener('pointerup',up); document.removeEventListener('pointercancel',up); if(st.done) window.__dragEnd=Date.now(); if(LP===st) LP=null; };
+  const mv=ev=>{ if(Math.hypot(ev.clientX-st.x,ev.clientY-st.y)>10&&!st.done){ clearTimeout(st.t); } };
+  const up=()=>end();
+  st.t=setTimeout(()=>{ st.done=true; if(!S.fsel) S.fsel=new Set(); S.fsel.add(b.dataset.id); try{ navigator.vibrate&&navigator.vibrate(25); }catch(_){} render(['fotos']); },450);
+  document.addEventListener('pointermove',mv); document.addEventListener('pointerup',up); document.addEventListener('pointercancel',up);
+});
 /* ---- visor de fotos (galería) ---- */
 const fotosList=()=>S.fotos.slice().sort((a,b)=>(b.creado||0)-(a.creado||0)).filter(f=>(!S.fcity||f.ciudad===S.fcity)&&(!S.fday||f.dia===S.fday));
 const LBC=new Map();
@@ -1060,9 +1110,9 @@ function sheetDoc(){
   };
 }
 function toDataURL(b){ return new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=rej; r.readAsDataURL(b); }); }
-async function shrinkImage(file, maxBytes=MAXB, maxDim=1800){
+async function shrinkImage(file, maxBytes=MAXB, maxDim=1800, q0=.82){
   const bmp = await createImageBitmap(file);
-  let max=maxDim, q=.82, blob;
+  let max=maxDim, q=q0, blob;
   for(let i=0;i<6;i++){
     const k=Math.min(1,max/Math.max(bmp.width,bmp.height)); const c=document.createElement('canvas'); c.width=Math.round(bmp.width*k); c.height=Math.round(bmp.height*k);
     c.getContext('2d').drawImage(bmp,0,0,c.width,c.height);
@@ -1095,7 +1145,7 @@ document.addEventListener('click', async e=>{
   if(a==='tab'){ if(el.dataset.tab!=='comer') S.pick=null; S.tab=el.dataset.tab; S.sub=null; render(); window.scrollTo(0,0); if(S.tab==='planes') loadWx(); }
   else if(a==='go'){ if(el.dataset.tab==='ruta'){ S.tab='mas'; S.sub='ruta'; } else { S.tab=el.dataset.tab; S.sub=null; } render(); window.scrollTo(0,0); }
   else if(a==='sub'){ if(el.dataset.sub==='gastos'){ S.tab='gastos'; S.sub=null; } else { S.sub=el.dataset.sub; } render(); window.scrollTo(0,0); if(S.sub==='tiempo') loadWx(); }
-  else if(a==='back'){ S.sub=null; S.tab='mas'; render(); window.scrollTo(0,0); }
+  else if(a==='back'){ S.fsel=null; S.sub=null; S.tab='mas'; render(); window.scrollTo(0,0); }
   else if(a==='city'){ S.city=el.dataset.v; render(); }
   else if(a==='meal'){ S.meal=el.dataset.v; render(); }
   else if(a==='mark'){ const k=el.dataset.k; const nv=!S.marcas[k]; S.marcas[k]=nv; render(); await dbDo(()=>F.setDoc(docRef('marcas',k),{v:nv})); }
@@ -1121,7 +1171,11 @@ document.addEventListener('click', async e=>{
   else if(a==='mapall') openMapAll();
   else if(a==='mapclose'){ const o=$('#mapov'); if(o) o.remove(); }
   else if(a==='addfoto') pickFotos(!!el.dataset.g);
-  else if(a==='openfoto') openLightbox(el.dataset.id);
+  else if(a==='openfoto'){ if(S.fsel){ const id=el.dataset.id; S.fsel.has(id)?S.fsel.delete(id):S.fsel.add(id); if(!S.fsel.size) S.fsel=null; render(['fotos']); } else openLightbox(el.dataset.id); }
+  else if(a==='fselx'){ S.fsel=null; render(['fotos']); }
+  else if(a==='fselall'){ S.fsel=new Set(fotosList().map(f=>f.id)); render(['fotos']); }
+  else if(a==='fdlsel'){ const l=fotosList().filter(f=>S.fsel&&S.fsel.has(f.id)); descargarFotos(l); }
+  else if(a==='fdlall') descargarFotos(fotosList());
   else if(a==='addtt') sheetTt();
   else if(a==='opentt') sheetOpenTt(el.dataset.id);
   else if(a==='tcity'){ S.tcity=el.dataset.v; render(['tiktoks']); }
