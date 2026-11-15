@@ -1058,7 +1058,7 @@ function ssRender(sc,data){
 }
 function openPresentacion(list){
   if(!list.length){ toast('No hay fotos para la presentación.'); return; }
-  const photos=list.slice().sort((a,b)=>String(a.dia).localeCompare(String(b.dia))||(a.creado||0)-(b.creado||0)); const music=ssMusic();
+  const photos=list.slice(); for(let k=photos.length-1;k>0;k--){ const r=Math.floor(Math.random()*(k+1)); [photos[k],photos[r]]=[photos[r],photos[k]]; } const music=ssMusic();
   document.getElementById('ss')?.remove();
   const el=document.createElement('div'); el.id='ss'; el.style.cssText='position:fixed;inset:0;z-index:320;background:#000;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none';
   el.innerHTML=`<div id="ss-st" style="position:absolute;inset:0"></div><div id="ss-bar" style="position:absolute;left:0;bottom:0;height:3px;background:#fff8;width:0;transition:width .6s;z-index:3"></div>
