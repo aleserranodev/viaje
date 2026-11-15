@@ -883,13 +883,13 @@ function viewFotos(){
   const list=all.filter(f=>(!S.fcity||f.ciudad===S.fcity)&&(!S.fday||f.dia===S.fday));
   const chip=(act,v,cur,label)=>`<button class="chip" data-act="${act}" data-v="${v}" style="cursor:pointer;border:1.5px solid ${cur===v?'var(--ink)':'transparent'};${cur===v?'font-weight:700;background:#fff':''}">${label}</button>`;
   const sel=S.fsel; const nsel=sel?list.filter(f=>sel.has(f.id)).length:0;
-  const bar=sel?`<div class="row" style="gap:8px;flex-wrap:wrap;position:sticky;top:0;z-index:5;background:var(--bg,#fff);padding:6px 0"><b style="flex:1;min-width:120px">${nsel} seleccionada${nsel===1?'':'s'}</b><button class="btn fly sm" data-act="fdlsel">Descargar</button><button class="btn ghost sm" data-act="fselall">Todas</button><button class="btn ghost sm" data-act="fselx">Cancelar</button></div>`
+  const bar=sel?`<div class="row" style="gap:8px;flex-wrap:wrap;position:sticky;top:0;z-index:5;background:var(--bg,#fff);padding:6px 0"><b style="flex:1;min-width:120px">${nsel} seleccionada${nsel===1?'':'s'}</b><button class="btn fly sm" data-act="fdlsel">Descargar</button><button class="btn danger sm" data-act="fdelsel">Borrar</button><button class="btn ghost sm" data-act="fselall">Todas</button><button class="btn ghost sm" data-act="fselx">Cancelar</button></div>`
    :`<div class="row" style="gap:8px"><button class="btn fly" data-act="addfoto" style="flex:1">${ic('camera')} Hacer foto</button><button class="btn ghost" data-act="addfoto" data-g="1" style="flex:1">${ic('plus')} Galería</button></div>`;
   return backBar('Fotos')+`<div class="pad stack-l">
   ${bar}
   <div class="stack" style="gap:8px"><div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:2px">${chip('fcity','',S.fcity,'Todas')}${FCITIES.map(c=>chip('fcity',c,S.fcity,c)).join('')}</div>
   ${days.length?`<div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:2px">${chip('fday','',S.fday,'Todos los días')}${days.map(d=>chip('fday',d,S.fday,esc(fmtFecha(d)))).join('')}</div>`:''}</div>
-  ${list.length?`<div class="fgrid">${list.map(f=>{ const on=sel&&sel.has(f.id); return `<button class="fph${on?' sel':''}" data-act="openfoto" data-id="${f.id}"><img src="${f.thumb}" alt="" loading="lazy" draggable="false"><span class="fcap">${esc(f.autor||'')}</span>${sel?`<span class="ck">${on?'✓':''}</span>`:''}</button>`; }).join('')}</div><div class="small muted" style="text-align:center">${list.length} foto${list.length===1?'':'s'}${sel?'':' · Mantén pulsada una para seleccionar'}</div>${!sel&&list.length?`<button class="btn ghost" data-act="fdlall">Descargar todas (${list.length})</button>`:''}`
+  ${list.length?`<div class="fgrid">${list.map(f=>{ const on=sel&&sel.has(f.id); return `<button class="fph${on?' sel':''}" data-act="openfoto" data-id="${f.id}"><img src="${f.thumb}" alt="" loading="lazy" draggable="false"><span class="fcap">${esc(f.autor||'')}</span>${sel?`<span class="ck">${on?'✓':''}</span>`:''}</button>`; }).join('')}</div><div class="small muted" style="text-align:center">${list.length} foto${list.length===1?'':'s'}${sel?'':' · Mantén pulsada una para seleccionar'}</div>${!sel&&list.length?`<button class="btn ghost" data-act="fdlall">Descargar todas (${list.length})</button>`:''}${!sel&&all.length?`<button class="btn danger" data-act="fdelall">${ic('trash',18)} Borrar todas las fotos (${all.length})</button>`:''}`
    :`<div class="empty">${all.length?'No hay fotos con este filtro.':'Aún no hay fotos. Haz la primera.'}</div>`}</div>`;
 }
 function sheetAddFoto(files){
@@ -965,6 +965,8 @@ function makeZip(files){
   const csz=cen.reduce((a,b)=>a+(b.byteLength??b.length),0); const end=new DataView(new ArrayBuffer(22)); end.setUint32(0,0x06054b50,true); end.setUint16(8,files.length,true); end.setUint16(10,files.length,true); end.setUint32(12,csz,true); end.setUint32(16,off,true);
   return new Blob([...parts,...cen,end.buffer],{type:'application/zip'});
 }
+async function borrarFotos(list){ if(!list.length) return; toast('Borrando '+list.length+' foto'+(list.length===1?'':'s')+'…');
+  const ok=await dbDo(async()=>{ for(const f of list) await delFoto(f); }); S.fsel=null; render(['fotos']); if(ok) toast(list.length+' foto'+(list.length===1?'':'s')+' borrada'+(list.length===1?'':'s')+' ✓'); }
 async function descargarFotos(list){
   if(!list.length) return; let stop=false;
   openSheet(`${sheetHead('Descargar '+list.length+' foto'+(list.length===1?'':'s'))}<div class="small muted" id="dl-m" style="text-align:left">Preparando…</div><div id="dl-b" class="stack"></div>`);
@@ -1239,6 +1241,8 @@ document.addEventListener('click', async e=>{
   else if(a==='fselall'){ S.fsel=new Set(fotosList().map(f=>f.id)); render(['fotos']); }
   else if(a==='fdlsel'){ const l=fotosList().filter(f=>S.fsel&&S.fsel.has(f.id)); descargarFotos(l); }
   else if(a==='fdlall') descargarFotos(fotosList());
+  else if(a==='fdelsel'){ const l=S.fotos.filter(f=>S.fsel&&S.fsel.has(f.id)); if(l.length&&confirm('¿Borrar '+l.length+' foto'+(l.length===1?'':'s')+' para los dos? No se puede deshacer.')) borrarFotos(l); }
+  else if(a==='fdelall'){ const l=S.fotos.slice(); if(l.length&&confirm('¿Borrar TODAS las fotos ('+l.length+') para los dos? Incluye las que subió el otro móvil. No se puede deshacer.')&&confirm('Última confirmación: se borrarán las '+l.length+' fotos de la app. ¿Seguro?')) borrarFotos(l); }
   else if(a==='addtt') sheetTt();
   else if(a==='opentt') sheetOpenTt(el.dataset.id);
   else if(a==='tcity'){ S.tcity=el.dataset.v; render(['tiktoks']); }
