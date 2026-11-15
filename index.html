@@ -905,15 +905,35 @@ function sheetAddFoto(files){
     for(const file of files){
       $('#f-m').textContent=`Subiendo ${n+fail+1} de ${files.length}…`;
       try{
-        const full=await shrinkImage(file,700*1024,2560,.92), th=await shrinkImage(file,40*1024,360);
-        const [data,thumb]=await Promise.all([toDataURL(full),toDataURL(th)]);
-        const ok=await dbDo(async()=>{ const ref=await F.addDoc(colRef('fotos'),{dia,ciudad,autor:S.yo,creado:Date.now()+n,thumb}); await F.setDoc(docRef('blobs','f-'+ref.id),{data}); });
+        const {chunks,thumb}=await prepOriginal(file);
+        const ok=await dbDo(async()=>{ const ref=await F.addDoc(colRef('fotos'),{dia,ciudad,autor:S.yo,creado:Date.now()+n,thumb,n:chunks.length}); await putChunks(ref.id,chunks); });
         ok?n++:fail++;
       }catch(e){ console.error(e); fail++; }
     }
     if(fail){ btn.disabled=false; $('#f-m').textContent=''; toast(`${n} subida${n===1?'':'s'}, ${fail} con error.`); if(!n) return; }
     S.fday=''; S.fcity=''; closeSheet(); if(!fail) toast(n+' foto'+(n===1?'':'s')+' subida'+(n===1?'':'s')+' ✓'); render(['fotos']);
   };
+}
+/* ---- fotos en calidad original (troceadas en la base de datos) ---- */
+async function prepOriginal(file){
+  const th=await shrinkImage(file,40*1024,360); let src=file;
+  if(!/^image\/(jpeg|png|webp)$/.test(file.type)||file.size>10*1024*1024) src=await shrinkImage(file,8*1024*1024,4096,.95);
+  const [data,thumb]=await Promise.all([toDataURL(src),toDataURL(th)]);
+  const chunks=[]; for(let p=0;p<data.length;p+=900000) chunks.push(data.slice(p,p+900000));
+  return {chunks,thumb};
+}
+const chunkId=(id,n,k)=>'f-'+id+(n>1?'-'+k:'');
+async function putChunks(id,chunks){ for(let k=0;k<chunks.length;k++) await F.setDoc(docRef('blobs',chunkId(id,chunks.length,k)),{data:chunks[k]}); }
+async function delChunks(id,n){ n=n||1; const ids=n>1?Array.from({length:n},(_,k)=>'f-'+id+'-'+k):['f-'+id]; for(const b of ids) await F.deleteDoc(docRef('blobs',b)); }
+async function fotoData(f){ const n=f.n||1;
+  if(n<=1){ const sn=await F.getDoc(docRef('blobs','f-'+f.id)); if(!sn.exists()) throw new Error('nada'); return sn.data().data; }
+  const ps=await Promise.all(Array.from({length:n},(_,k)=>F.getDoc(docRef('blobs','f-'+f.id+'-'+k)))); return ps.map(p=>{ if(!p.exists()) throw new Error('falta'); return p.data().data; }).join(''); }
+async function delFoto(f){ await F.deleteDoc(docRef('fotos',f.id)); await delChunks(f.id,f.n); }
+async function reemplazarOriginal(f,file){
+  const {chunks,thumb}=await prepOriginal(file); const old=f.n||1;
+  await putChunks(f.id,chunks); await F.setDoc(docRef('fotos',f.id),{thumb,n:chunks.length},{merge:true});
+  if(old>1&&chunks.length<=1) await delChunks(f.id,old); else if(old<=1&&chunks.length>1) await F.deleteDoc(docRef('blobs','f-'+f.id)); else if(old>chunks.length) for(let k=chunks.length;k<old;k++) await F.deleteDoc(docRef('blobs','f-'+f.id+'-'+k));
+  const u=LBC.get(f.id); if(u){ try{ URL.revokeObjectURL(u); }catch(_){} LBC.delete(f.id); }
 }
 /* ---- descarga de fotos (sin tocar la calidad guardada) ---- */
 const CRCT=(()=>{ const t=new Uint32Array(256); for(let n=0;n<256;n++){ let c=n; for(let k=0;k<8;k++) c=c&1?0xEDB88320^(c>>>1):c>>>1; t[n]=c>>>0; } return t; })();
@@ -934,8 +954,8 @@ async function descargarFotos(list){
   const files=[]; const bytes=[];
   try{
     for(let n=0;n<list.length;n++){ if(!$('#dl-m')){ stop=true; break; } $('#dl-m').textContent=`Preparando ${n+1} de ${list.length}…`;
-      const f=list[n]; const sn=await F.getDoc(docRef('blobs','f-'+f.id)); if(!sn.exists()) continue;
-      const blob=await (await fetch(sn.data().data)).blob(); const name=`viaje_${f.dia}_${(f.ciudad||'').normalize('NFD').replace(/[̀-ͯ]/g,'')}_${String(n+1).padStart(2,'0')}.jpg`;
+      const f=list[n]; let dat; try{ dat=await fotoData(f); }catch(_){ continue; }
+      const blob=await (await fetch(dat)).blob(); const name=`viaje_${f.dia}_${(f.ciudad||'').normalize('NFD').replace(/[̀-ͯ]/g,'')}_${String(n+1).padStart(2,'0')}.${/png/.test(blob.type)?'png':/webp/.test(blob.type)?'webp':'jpg'}`;
       files.push(new File([blob],name,{type:blob.type||'image/jpeg'})); bytes.push(new Uint8Array(await blob.arrayBuffer())); }
   }catch(e){ console.error(e); }
   if(stop||!$('#dl-m')) return;
@@ -962,7 +982,7 @@ document.addEventListener('pointerdown',e=>{ const b=e.target.closest&&e.target.
 /* ---- visor de fotos (galería) ---- */
 const fotosList=()=>S.fotos.slice().sort((a,b)=>(b.creado||0)-(a.creado||0)).filter(f=>(!S.fcity||f.ciudad===S.fcity)&&(!S.fday||f.dia===S.fday));
 const LBC=new Map();
-async function lbUrl(f){ if(LBC.has(f.id)) return LBC.get(f.id); const sn=await F.getDoc(docRef('blobs','f-'+f.id)); if(!sn.exists()) throw new Error('nada'); const url=URL.createObjectURL(await (await fetch(sn.data().data)).blob()); LBC.set(f.id,url); return url; }
+async function lbUrl(f){ if(LBC.has(f.id)) return LBC.get(f.id); const url=URL.createObjectURL(await (await fetch(await fotoData(f))).blob()); LBC.set(f.id,url); return url; }
 function openLightbox(id){
   let list=fotosList(); let i=list.findIndex(x=>x.id===id); if(i<0) return;
   document.getElementById('lb')?.remove();
@@ -971,7 +991,7 @@ function openLightbox(id){
   el.innerHTML=`<div id="lb-t" style="position:absolute;inset:0;display:flex;width:300%;will-change:transform"></div>
    <div id="lb-top" style="position:absolute;left:0;right:0;top:0;padding:max(12px,env(safe-area-inset-top)) 14px 24px;display:none;align-items:center;justify-content:space-between;background:linear-gradient(#000a,#0000);color:#fff;z-index:2"><button id="lb-x" class="iconbtn" aria-label="Cerrar" style="background:#fff3;color:#fff">${ic('x')}</button><span id="lb-n" style="font-weight:700"></span><span style="width:44px"></span></div>
    <button id="lb-sel" aria-label="Seleccionar" style="position:absolute;right:14px;top:max(12px,env(safe-area-inset-top));z-index:3;width:44px;height:44px;border-radius:22px;border:2.5px solid #fff;background:#0006;color:#000;font-size:22px;font-weight:800;display:flex;align-items:center;justify-content:center;cursor:pointer"></button>
-   <div id="lb-bot" style="position:absolute;left:0;right:0;bottom:0;padding:24px 14px max(14px,env(safe-area-inset-bottom));display:none;gap:10px;flex-wrap:wrap;background:linear-gradient(#0000,#000a);z-index:2"><a id="lb-dl" class="btn fly" style="flex:1">Descargar esta</a><button id="lb-del" class="btn danger" style="flex:1">Borrar</button><button id="lb-dls" class="btn ams" style="flex-basis:100%;display:none"></button></div>`;
+   <div id="lb-bot" style="position:absolute;left:0;right:0;bottom:0;padding:24px 14px max(14px,env(safe-area-inset-bottom));display:none;gap:10px;flex-wrap:wrap;background:linear-gradient(#0000,#000a);z-index:2"><a id="lb-dl" class="btn fly" style="flex:1">Descargar esta</a><button id="lb-up" class="btn ghost" style="flex:1;background:#fff">Subir original</button><button id="lb-del" class="btn danger" style="flex:1">Borrar</button><button id="lb-dls" class="btn ams" style="flex-basis:100%;display:none"></button></div>`;
   document.body.appendChild(el);
   const tr=el.querySelector('#lb-t'); let ctl=false;
   const slide=(f,loadFull)=>{ const d=document.createElement('div'); d.style.cssText='width:33.3333%;height:100%;display:flex;align-items:center;justify-content:center;flex:none'; if(!f) return d;
@@ -1015,10 +1035,14 @@ function openLightbox(id){
   el.addEventListener('pointercancel',e=>{ pend(e); tr.style.transition='transform .2s'; tr.style.transform='translateX(-33.3333%)'; });
   el.addEventListener('wheel',e=>{ e.preventDefault(); zoomAt(Math.max(1,Math.min(5,z.s*Math.exp(-e.deltaY*0.0015))),e.clientX,e.clientY); applyZ(false); },{passive:false});
   el.querySelector('#lb-x').onclick=close;
+  el.querySelector('#lb-up').onclick=()=>{ const inp=document.createElement('input'); inp.type='file'; inp.accept='image/*';
+    inp.onchange=async()=>{ const file=inp.files[0]; if(!file) return; const f=list[i]; const b=el.querySelector('#lb-up'); b.disabled=true; b.textContent='Subiendo…';
+      const ok=await dbDo(()=>reemplazarOriginal(f,file)); b.disabled=false; b.textContent='Subir original'; if(ok){ toast('Foto sustituida por el original ✓'); const nf=S.fotos.find(x=>x.id===f.id); if(nf) list[i]=nf; build(); } };
+    inp.click(); };
   el.querySelector('#lb-sel').onclick=()=>{ const f=list[i]; if(!f) return; if(!S.fsel) S.fsel=new Set(); S.fsel.has(f.id)?S.fsel.delete(f.id):S.fsel.add(f.id); if(!S.fsel.size) S.fsel=null; updSel(); };
   el.querySelector('#lb-dls').onclick=()=>{ const l=fotosList().filter(f=>S.fsel&&S.fsel.has(f.id)); close(); descargarFotos(l); };
   el.querySelector('#lb-del').onclick=async()=>{ const f=list[i]; if(!confirm('¿Borrar esta foto para los dos?')) return;
-    const ok=await dbDo(async()=>{ await F.deleteDoc(docRef('fotos',f.id)); await F.deleteDoc(docRef('blobs','f-'+f.id)); });
+    const ok=await dbDo(async()=>{ await delFoto(f); });
     if(!ok) return; if(S.fsel){ S.fsel.delete(f.id); if(!S.fsel.size) S.fsel=null; } list=list.filter(x=>x.id!==f.id); if(!list.length){ close(); return; } if(i>=list.length) i=list.length-1; build(); };
   build();
 }
