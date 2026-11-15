@@ -970,16 +970,18 @@ function openLightbox(id){
   el.style.cssText='position:fixed;inset:0;z-index:300;background:#000;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none';
   el.innerHTML=`<div id="lb-t" style="position:absolute;inset:0;display:flex;width:300%;will-change:transform"></div>
    <div id="lb-top" style="position:absolute;left:0;right:0;top:0;padding:max(12px,env(safe-area-inset-top)) 14px 24px;display:none;align-items:center;justify-content:space-between;background:linear-gradient(#000a,#0000);color:#fff;z-index:2"><button id="lb-x" class="iconbtn" aria-label="Cerrar" style="background:#fff3;color:#fff">${ic('x')}</button><span id="lb-n" style="font-weight:700"></span><span style="width:44px"></span></div>
-   <div id="lb-bot" style="position:absolute;left:0;right:0;bottom:0;padding:24px 14px max(14px,env(safe-area-inset-bottom));display:none;gap:10px;background:linear-gradient(#0000,#000a);z-index:2"><a id="lb-dl" class="btn fly" style="flex:1">Descargar</a><button id="lb-del" class="btn danger" style="flex:1">Borrar</button></div>`;
+   <button id="lb-sel" aria-label="Seleccionar" style="position:absolute;right:14px;top:max(12px,env(safe-area-inset-top));z-index:3;width:44px;height:44px;border-radius:22px;border:2.5px solid #fff;background:#0006;color:#000;font-size:22px;font-weight:800;display:flex;align-items:center;justify-content:center;cursor:pointer"></button>
+   <div id="lb-bot" style="position:absolute;left:0;right:0;bottom:0;padding:24px 14px max(14px,env(safe-area-inset-bottom));display:none;gap:10px;flex-wrap:wrap;background:linear-gradient(#0000,#000a);z-index:2"><a id="lb-dl" class="btn fly" style="flex:1">Descargar esta</a><button id="lb-del" class="btn danger" style="flex:1">Borrar</button><button id="lb-dls" class="btn ams" style="flex-basis:100%;display:none"></button></div>`;
   document.body.appendChild(el);
   const tr=el.querySelector('#lb-t'); let ctl=false;
   const slide=(f,loadFull)=>{ const d=document.createElement('div'); d.style.cssText='width:33.3333%;height:100%;display:flex;align-items:center;justify-content:center;flex:none'; if(!f) return d;
     const im=document.createElement('img'); im.src=f.thumb; im.style.cssText='max-width:100%;max-height:100%;object-fit:contain;pointer-events:none'+(loadFull?';filter:blur(2px)':''); im.draggable=false; d.appendChild(im);
     lbUrl(f).then(u=>{ im.src=u; im.style.filter=''; }).catch(()=>{ if(loadFull){ const m=document.createElement('div'); m.style.cssText='position:absolute;color:#fff;bottom:90px;font-size:14px'; m.textContent='No se pudo cargar. ¿Hay conexión?'; d.appendChild(m); } }); return d; };
   const build=()=>{ tr.style.transition='none'; tr.style.transform='translateX(-33.3333%)'; tr.innerHTML=''; [list[i-1],list[i],list[i+1]].forEach((f,k)=>tr.appendChild(slide(f,k===1)));
-    el.querySelector('#lb-n').textContent=(i+1)+' / '+list.length; const f=list[i]; const a=el.querySelector('#lb-dl'); a.removeAttribute('href'); lbUrl(f).then(u=>{ if(list[i]===f){ a.href=u; a.download='viaje-'+f.dia+'-'+f.id.slice(0,5)+'.jpg'; } }).catch(()=>{}); };
+    const f=list[i]; const a=el.querySelector('#lb-dl'); a.removeAttribute('href'); lbUrl(f).then(u=>{ if(list[i]===f){ a.href=u; a.download='viaje-'+f.dia+'-'+f.id.slice(0,5)+'.jpg'; } }).catch(()=>{}); updSel(); };
+  const updSel=()=>{ const f=list[i]; const on=!!(S.fsel&&f&&S.fsel.has(f.id)); const b=el.querySelector('#lb-sel'); b.textContent=on?'✓':''; b.style.background=on?'#fff':'#0006'; const n=S.fsel?S.fsel.size:0; const d=el.querySelector('#lb-dls'); d.style.display=n?'':'none'; d.textContent='Descargar seleccionadas ('+n+')'; el.querySelector('#lb-n').textContent=(i+1)+' / '+list.length+(n?' · '+n+' sel.':''); };
   const setCtl=v=>{ ctl=v; el.querySelector('#lb-top').style.display=v?'flex':'none'; el.querySelector('#lb-bot').style.display=v?'flex':'none'; };
-  const close=()=>{ document.removeEventListener('keydown',key); el.remove(); };
+  const close=()=>{ document.removeEventListener('keydown',key); el.remove(); render(['fotos']); };
   const go=dir=>{ const ni=i+dir; if(ni<0||ni>=list.length){ tr.style.transition='transform .2s'; tr.style.transform='translateX(-33.3333%)'; return; }
     tr.style.transition='transform .22s ease-out'; tr.style.transform='translateX('+(dir>0?'-66.6666%':'0')+')';
     setTimeout(()=>{ i=ni; build(); },230); };
@@ -995,9 +997,11 @@ function openLightbox(id){
     else if(m==='v'&&Math.abs(e.clientY-sy)>110) close(); });
   el.addEventListener('pointercancel',()=>{ mode=''; tr.style.transition='transform .2s'; tr.style.transform='translateX(-33.3333%)'; });
   el.querySelector('#lb-x').onclick=close;
+  el.querySelector('#lb-sel').onclick=()=>{ const f=list[i]; if(!f) return; if(!S.fsel) S.fsel=new Set(); S.fsel.has(f.id)?S.fsel.delete(f.id):S.fsel.add(f.id); if(!S.fsel.size) S.fsel=null; updSel(); };
+  el.querySelector('#lb-dls').onclick=()=>{ const l=fotosList().filter(f=>S.fsel&&S.fsel.has(f.id)); close(); descargarFotos(l); };
   el.querySelector('#lb-del').onclick=async()=>{ const f=list[i]; if(!confirm('¿Borrar esta foto para los dos?')) return;
     const ok=await dbDo(async()=>{ await F.deleteDoc(docRef('fotos',f.id)); await F.deleteDoc(docRef('blobs','f-'+f.id)); });
-    if(!ok) return; list=list.filter(x=>x.id!==f.id); if(!list.length){ close(); return; } if(i>=list.length) i=list.length-1; build(); };
+    if(!ok) return; if(S.fsel){ S.fsel.delete(f.id); if(!S.fsel.size) S.fsel=null; } list=list.filter(x=>x.id!==f.id); if(!list.length){ close(); return; } if(i>=list.length) i=list.length-1; build(); };
   build();
 }
 async function sheetOpenFoto(id){
