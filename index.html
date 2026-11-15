@@ -916,15 +916,18 @@ async function qAll(){ let a=[]; try{ a=await IDBQ.tx('readonly',s=>s.getAll())|
 async function qEnqueue(files,dia,ciudad){ const t=Date.now(); let i=0; for(const file of files){ await qSave({qid:t+'-'+(i)+'-'+Math.random().toString(36).slice(2,7),file,dia,ciudad,autor:S.yo,creado:t+i,refId:null,fails:0}); i++; } }
 function qBar(n,msg){ let b=document.getElementById('qbar');
   if(!n){ if(b) b.remove(); return; }
-  if(!b){ b=document.createElement('div'); b.id='qbar'; b.style.cssText='position:fixed;left:12px;right:12px;top:calc(8px + env(safe-area-inset-top));z-index:250;background:var(--ink);color:#fff;border-radius:14px;padding:10px 14px;font-size:14px;font-weight:600;box-shadow:0 6px 20px #0004;text-align:center;pointer-events:none'; document.body.appendChild(b); }
-  b.textContent=msg||('Subiendo fotos… quedan '+n); }
+  if(!b){ b=document.createElement('div'); b.id='qbar'; b.style.cssText='position:fixed;left:12px;right:12px;top:calc(8px + env(safe-area-inset-top));z-index:250;background:var(--ink);color:#fff;border-radius:14px;padding:8px 8px 8px 14px;font-size:14px;font-weight:600;box-shadow:0 6px 20px #0004;display:flex;align-items:center;gap:10px'; b.innerHTML='<span id="qtxt" style="flex:1"></span><button id="qcancel" style="border:0;border-radius:10px;padding:8px 12px;font-weight:700;background:#fff;color:#A32020;font-size:13px">Cancelar</button>'; document.body.appendChild(b); b.querySelector('#qcancel').onclick=qCancel; }
+  b.querySelector('#qtxt').textContent=msg||('Subiendo fotos… quedan '+n); }
+let QSTOP=false;
+async function qCancel(){ if(!confirm('¿Cancelar la subida? Las fotos que falten no se subirán.')) return; QSTOP=true; MEMQ.length=0; try{ await IDBQ.tx('readwrite',s=>s.clear()); }catch(_){} qBar(0); toast('Subida cancelada.'); }
 async function qRun(){ if(QRUN) return; QRUN=true; let done=0, lost=0;
-  try{ for(;;){ const items=await qAll(); qBar(items.length); if(!items.length) break;
+  QSTOP=false;
+  try{ for(;;){ if(QSTOP) break; const items=await qAll(); qBar(items.length); if(!items.length) break;
       if(!S.dbReady||!navigator.onLine){ qBar(items.length,'Fotos pendientes: esperando conexión…'); await new Promise(r=>setTimeout(r,4000)); continue; }
       const it=items[0];
       try{ const {chunks,thumb}=await prepOriginal(it.file); let id=it.refId;
         if(!id){ const ref=await F.addDoc(colRef('fotos'),{dia:it.dia,ciudad:it.ciudad,autor:it.autor,creado:it.creado,thumb,n:chunks.length}); id=ref.id; it.refId=id; await qSave(it); }
-        await putChunks(id,chunks); await qDel(it); done++;
+        if(QSTOP){ if(id){ try{ await F.deleteDoc(docRef('fotos',id)); await delChunks(id,chunks.length); }catch(_){} } break; } await putChunks(id,chunks); await qDel(it); done++;
       }catch(e){ console.error(e); it.fails=(it.fails||0)+1;
         if(it.fails>=5){ await qDel(it); lost++; if(it.refId){ try{ await F.deleteDoc(docRef('fotos',it.refId)); await delChunks(it.refId,20); }catch(_){} } }
         else { await qSave(it); await new Promise(r=>setTimeout(r,3000)); } } }
