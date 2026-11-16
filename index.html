@@ -220,7 +220,7 @@ const S = {
   yo: normP(store.get('viaje.yo')) || 'Alejandro',
   lugares:[], gTab:'lista',
   gastos: DATA.gastos.lineas.map((l,i)=>({id:'g'+(i+1), fecha:l[0], concepto:l[1], total:Math.round(l[2]*100), pagador:'Cristina', local:true, orden:i})),
-  marcas:{}, planes:[], archivos:[], fotos:[], fsel:null, tiktoks:[], tcity:'', ttipo:'', pagos:[], wx:null, wxAt:0, fday:'', fcity:'', config:{},
+  marcas:{}, planes:[], archivos:[], fotos:[], fsel:null, gday:'', tiktoks:[], tcity:'', ttipo:'', pagos:[], wx:null, wxAt:0, fday:'', fcity:'', config:{},
   online:false, dbReady:false
 };
 const CITYC = {'Ámsterdam':'var(--ams)','Brujas':'var(--bru)','Gante':'var(--bru)','Bruselas':'var(--bxl)'};
@@ -570,7 +570,12 @@ function cuentas(){
 function gastoRow(g){ return `<button class="listrow" data-act="editgasto" data-id="${g.id}"><span class="stack" style="gap:0;flex:1;min-width:0"><span style="font-weight:700">${esc(g.concepto)}</span><span class="small muted">${fmtFecha(g.fecha)}${g.pagador?' · pagó '+esc(g.pagador):' · sin pagador'}</span></span><span class="stack" style="gap:0;text-align:right"><span style="font-weight:700">${eur(g.total)}</span><span class="small muted">${eur(half(g.total))} c/u</span></span></button>`; }
 function viewGastos(){
   const sortf=(a,b)=>(a.fecha||'').slice(0,10).localeCompare((b.fecha||'').slice(0,10)) || (a.orden??99)-(b.orden??99);
-  const list=[...S.gastos].sort(sortf);
+  const dayOf=g=>(g.fecha||'').slice(0,10); const all=[...S.gastos].sort(sortf);
+  if(S.gday&&!DAYS.some(x=>x.d===S.gday)) S.gday='';
+  const list=S.gday?all.filter(g=>dayOf(g)===S.gday):all;
+  const dsum=list.reduce((a,g)=>a+(g.total||0),0);
+  const dstrip=`<div class="dstrip" style="margin:0 -20px"><button class="dtile ${S.gday?'':'on'}" style="--c:var(--ink)" data-act="gday" data-d="" aria-pressed="${!S.gday}"><span class="dw">Todos</span><span class="dn">${all.length}</span><span class="dc">gastos</span></button>${DAYS.map(x=>{ const dd=new Date(x.d+'T12:00:00'); const n=all.filter(g=>dayOf(g)===x.d).length; return `<button class="dtile ${x.d===S.gday?'on':''}" style="--c:${x.c}" data-act="gday" data-d="${x.d}" aria-pressed="${x.d===S.gday}"><span class="dw">${DIA[dd.getDay()]}</span><span class="dn">${dd.getDate()}</span><span class="dc">${x.city==='Vuelos'?'Vuelo':esc(x.city)}</span>${n?`<span class="dbadge">${n}</span>`:''}</button>`; }).join('')}</div>`;
+  const dnote=S.gday?`<div class="row" style="justify-content:space-between;background:#fff;border:1px solid var(--line);border-radius:16px;padding:12px 14px"><span class="small" style="font-weight:600">${esc(fmtFecha(S.gday))}</span><span style="font-weight:700">${list.length?eur(dsum)+' · '+eur(half(dsum))+' por persona':'Sin gastos este día'}</span></div>`:'';
   const tot=totalGastos(); const q=cuentas();
   const bal = (q.cnt.Alejandro+q.cnt.Cristina)===0 ? 'Indica quién pagó cada gasto para ver el saldo'
     : (q.net>0?`Alejandro debe <b>${eur(q.net)}</b> a Cristina`:(q.net<0?`Cristina debe <b>${eur(-q.net)}</b> a Alejandro`:'Estáis en paz'));
@@ -579,7 +584,7 @@ function viewGastos(){
   const devList=devs.length?`<div class="stack" style="gap:8px"><h2 class="h2">Devoluciones</h2>${devs.map(p=>`<button class="listrow" data-act="editdev" data-id="${p.id}"><span class="stack" style="gap:0;flex:1;min-width:0"><span style="font-weight:700">${esc(p.de)} → ${esc(p.a)}</span><span class="small muted">${fmtFecha(p.fecha)}${p.nota?' · '+esc(p.nota):''}</span></span><span style="font-weight:700">${eur(p.importe)}</span></button>`).join('')}</div>`:'';
   let body='';
   if(tab==='lista'){
-    body=`<div class="stack" style="gap:8px">${list.map(gastoRow).join('')}</div>`;
+    body=list.length?`<div class="stack" style="gap:8px">${list.map(gastoRow).join('')}</div>`:(S.gday?'':`<div class="empty">Aún no hay gastos.</div>`);
   } else {
     const person=(n,col,soft,ink)=>`<div style="flex:1;background:${soft};border-radius:18px;padding:14px;display:flex;flex-direction:column;gap:4px;color:${ink}"><div class="small" style="font-weight:700">${n} ha pagado</div><div style="font-family:'Space Grotesk';font-size:24px;line-height:30px;font-weight:700">${eur(q.paid[n])}</div><div class="small">${q.cnt[n]} ${q.cnt[n]===1?'gasto':'gastos'}</div></div>`;
     const lst=n=>{ const l=list.filter(g=>g.pagador===n); return l.length?`<div class="stack" style="gap:8px"><div class="row" style="justify-content:space-between"><h2 class="h2">Pagos de ${n}</h2><span style="font-weight:700">${eur(q.paid[n])}</span></div>${l.map(gastoRow).join('')}</div>`:''; };
@@ -601,12 +606,13 @@ function viewGastos(){
      <div class="small" style="margin-top:4px">${bal}${q.dev?` · ya devuelto ${eur(q.dev)}`:''}</div></div>
    <div class="row" style="gap:8px"><button class="btn ams" data-act="addgasto" style="flex:1">${ic('plus')} Añadir gasto</button><button class="btn ghost" data-act="adddev" style="flex:1">${ic('wallet')} Devolver dinero</button></div>
    <div class="seg"><button class="${tab==='lista'?'on':''}" data-act="gtab" data-v="lista">Gastos</button><button class="${tab==='cuentas'?'on':''}" data-act="gtab" data-v="cuentas">Quién pagó</button></div>
+   ${dstrip}${dnote}
    ${body}${devList}</div>`;
 }
 
 /* ====================== render ====================== */
 function currentName(){ return S.sub || S.tab; }
-const NAVK=['tab','sub','city','meal','pd','gTab','tcity','ttipo','fcity','fday'];
+const NAVK=['tab','sub','city','meal','pd','gTab','gday','tcity','ttipo','fcity','fday'];
 function navSave(){ try{ store.set('viaje.nav',JSON.stringify(Object.fromEntries(NAVK.map(k=>[k,S[k]])))); }catch(_){} }
 function navLoad(){ try{ const o=JSON.parse(store.get('viaje.nav')||'null'); if(!o) return;
   if(['inicio','gastos','planes','comer','mas'].includes(o.tab)) S.tab=o.tab;
@@ -1310,6 +1316,7 @@ document.addEventListener('click', async e=>{
   else if(a==='addplantop') sheetPlan('');
   else if(a==='editgasto'){ const g=S.gastos.find(x=>x.id===el.dataset.id); if(g) sheetGasto(g); }
   else if(a==='pday'){ S.pd=el.dataset.d; render(); }
+  else if(a==='gday'){ S.gday=el.dataset.d||''; render(['gastos']); }
   else if(a==='addchoose') sheetChoose(el.dataset.d);
   else if(a==='plusrest') sheetPlan(S.pick||null,null,{texto:'Comer en '+el.dataset.n,city:el.dataset.c,ubic:'https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(el.dataset.n+' '+(el.dataset.c||''))});
   else if(a==='pickcancel'){ const d=S.pick; S.pick=null; S.pd=d; S.tab='planes'; render(); window.scrollTo(0,0); }
